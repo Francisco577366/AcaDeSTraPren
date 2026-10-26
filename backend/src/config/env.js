@@ -134,7 +134,19 @@ const env = {
   exchangeRateTtlMinutes: Number(process.env.EXCHANGE_RATE_TTL_MINUTES || 360),
   exchangeRateTimeoutMs: Number(process.env.EXCHANGE_RATE_TIMEOUT_MS || 8000),
   /** Zona horaria de la academia; de aqui sale que dia es "hoy". */
-  timezone: process.env.TZ || 'America/Caracas',
+  /*
+   * La zona horaria DE LA ACADEMIA, que no es la del servidor.
+   *
+   * Sale de ACADEMY_TZ y NO de TZ, aunque TZ parezca lo natural. TZ la fija
+   * la plataforma: Vercel la pone en UTC y ni siquiera deja cambiarla, porque
+   * es un nombre reservado. Leyendo de ahi, un cobro registrado a las 22:00
+   * en Caracas se guardaria con la fecha del dia siguiente, que es justo el
+   * fallo que ya costo un mes de cobros mal fechados.
+   *
+   * Que el servidor corra en UTC esta bien y es lo normal; lo que no puede
+   * es decidir en que dia vive la academia.
+   */
+  timezone: process.env.ACADEMY_TZ || 'America/Caracas',
   /**
    * Dia en que arranco la academia. El mes de arranque no se paga completo:
    * la nomina de ese periodo sale con las semanas que quedaron desde aqui.

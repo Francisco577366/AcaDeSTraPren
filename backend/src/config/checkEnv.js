@@ -150,6 +150,17 @@ function revisar() {
     }
   }
 
+  /*
+   * La zona horaria tiene que existir. Una mal escrita no falla al arrancar:
+   * revienta con un RangeError en la primera fecha que se calcule, que sera
+   * al registrar un cobro, y con un mensaje que no apunta a la causa.
+   */
+  try {
+    new Date().toLocaleDateString('en-CA', { timeZone: env.timezone });
+  } catch (error) {
+    graves.push(`ACADEMY_TZ no es una zona horaria valida: "${env.timezone}"`);
+  }
+
   if (env.docsEnabled) {
     avisos.push('API_DOCS_ENABLED=true publica Swagger y toda la superficie del API');
   }
