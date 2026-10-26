@@ -1,0 +1,84 @@
+# Publica el frontend en GitHub Pages en cada push a main.
+#
+# Solo el frontend. El backend NO se despliega aqui: Pages sirve ficheros
+# estaticos, no ejecuta Node. El backend va a Vercel, desde este mismo
+# repositorio, apuntando a la carpeta backend/.
+name: Publicar en GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    # Un cambio solo en el backend no necesita reconstruir la web.
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/pages.yml'
+  # Y a mano, cuando haga falta.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Un despliegue a la vez. Si llegan dos pushes seguidos, el segundo espera en
+# vez de pisar al primero a mitad.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  construir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # npm ci y no npm install: instala exactamente lo que dice el lockfile,
+      # asi lo que se publica sale de las mismas versiones que probaste.
+      - name: Instalar
+        working-directory: frontend
+        run: npm ci
+
+      - name: Construir
+        working-directory: frontend
+        env:
+          # Vite resuelve esto AL CONSTRUIR: queda dentro del bundle, y de la
+          # CSP. Si VITE_API_URL falta o esta mal, el navegador cortara las
+          # llamadas al API y la pagina saldra vacia sin decir por que.
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          # Pages sirve el proyecto en /nombre-del-repositorio/, no en la raiz.
+          VITE_BASE_PATH: /${{ github.event.repository.name }}/
+        run: npm run build
+
+      # Si falta la variable el build "funciona" pero la web queda muerta, asi
+      # que vale mas pararlo aqui que descubrirlo en el navegador.
+      - name: Comprobar que el API quedo dentro
+        working-directory: frontend
+        run: |
+          if ! grep -q "connect-src 'self' https://" dist/index.html; then
+            echo "VITE_API_URL no llego al build."
+            echo "Ponla en Settings > Secrets and variables > Actions > Variables."
+            exit 1
+          fi
+          echo "API en la CSP:"
+          grep -o "connect-src[^;]*" dist/index.html
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/dist
+
+  publicar:
+    needs: construir
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.pages.outputs.page_url }}
+    steps:
+      - id: pages
+        uses: actions/deploy-pages@v4

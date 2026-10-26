@@ -1,0 +1,13 @@
+node_modules
+npm-debug.log
+Dockerfile
+.dockerignore
+.git
+.env
+.env.*
+
+# Los datos reales de la academia no entran en la imagen: una imagen se sube a
+# un registry, se comparte y se queda en capas que no se borran. El seed se
+# monta como volumen cuando hace falta restaurar.
+src/seed/data.json
+src/seed/*.backup.json

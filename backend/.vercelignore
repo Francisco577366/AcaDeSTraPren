@@ -1,0 +1,9 @@
+# Los datos reales de la academia no se despliegan: el servidor no los
+# necesita, estan en la base. Subirlos solo multiplica los sitios donde viven
+# los nombres de los alumnos.
+src/seed/data.json
+src/seed/*.backup.json
+
+node_modules
+.env
+.env.*

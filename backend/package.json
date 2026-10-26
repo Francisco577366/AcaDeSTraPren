@@ -1,0 +1,39 @@
+{
+  "name": "academia-backend",
+  "version": "1.0.0",
+  "description": "API administrativa de la academia (Node + Express + Mongoose + MongoDB + Swagger)",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon --legacy-watch src/server.js",
+    "bootstrap": "node src/seed/bootstrap.js",
+    "seed": "node src/seed/bootstrap.js export",
+    "seed:load": "node src/seed/bootstrap.js load",
+    "seed:restore": "node src/seed/bootstrap.js restore",
+    "probar:cuentas": "node scripts/probar-cuentas.js",
+    "probar:api": "node scripts/probar-api.js",
+    "demo:sembrar": "node scripts/sembrar-demo.js",
+    "probar:demo": "node scripts/probar-demo.js",
+    "revisar:produccion": "node scripts/revisar-produccion.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dayjs": "^1.11.13",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "express-validator": "^7.2.1",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.9.5",
+    "morgan": "^1.10.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1"
+  },
+  "devDependencies": {
+    "mongodb-memory-server": "^10.4.3",
+    "nodemon": "^3.1.9"
+  }
+}

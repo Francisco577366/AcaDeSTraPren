@@ -1,0 +1,36 @@
+node_modules/
+dist/
+build/
+coverage/
+
+# ---- Secretos ----
+# Los .env tienen la cadena de Atlas (con usuario y clave dentro), el secreto
+# del JWT y la del administrador. No entran al repositorio nunca. Lo que se
+# comparte son las plantillas .example, con los nombres de las variables y sin
+# un solo valor real.
+#
+# Ojo con el orden: la ultima regla que casa es la que manda, asi que las
+# excepciones van DESPUES del patron que las excluye.
+.env
+.env.*
+!.env.example
+!.env.production.example
+
+# ---- Datos personales ----
+# El seed guarda los datos REALES de la academia: nombres de alumnos, sus
+# mensualidades y su historial de pagos. Son datos personales de menores, asi
+# que no viajan en el repositorio aunque sea privado: un repositorio cambia de
+# visibilidad con un clic y los forks y los clones ya no se recogen.
+#
+# Para respaldar los datos, `npm run seed` genera este fichero en local; hay
+# que copiarlo a un sitio cifrado, no subirlo. La estructura de las tablas
+# vive en dataset.js, que si esta en el repositorio.
+backend/src/seed/data.json
+backend/src/seed/*.backup.json
+
+# ---- Varios ----
+*.log
+npm-debug.log*
+.DS_Store
+.vscode/
+.idea/
