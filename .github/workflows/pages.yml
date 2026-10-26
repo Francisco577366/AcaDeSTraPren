@@ -7,7 +7,9 @@ name: Publicar en GitHub Pages
 
 on:
   push:
-    branches: [main]
+    # Las dos: GitHub crea repositorios nuevos con main, pero git init en
+    # local sigue usando master, y este repositorio salio asi.
+    branches: [main, master]
     # Un cambio solo en el backend no necesita reconstruir la web.
     paths:
       - 'frontend/**'
