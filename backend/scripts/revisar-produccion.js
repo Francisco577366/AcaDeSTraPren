@@ -163,6 +163,11 @@ titulo('5. Despliegue');
 
 {
   ok(existe('backend/api/index.js'), 'hay entrada para serverless (Vercel)');
+  // En serverless no hay arranque que conecte: si la aplicacion no garantiza
+  // la conexion por peticion, todo lo que toque la base se cae a los diez
+  // segundos con un 'buffering timed out' que no dice que falte la conexion.
+  ok(leer('backend/src/app.js').includes("app.use('/api', ensureDb)"),
+    'la aplicacion garantiza la conexion a la base en cada peticion');
   const vercel = JSON.parse(leer('backend/vercel.json'));
   ok(Array.isArray(vercel.crons) && vercel.crons.length > 0,
     'el cron de mensualidades esta declarado', vercel.crons?.[0]?.schedule);

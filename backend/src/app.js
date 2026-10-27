@@ -7,6 +7,7 @@ const env = require('./config/env');
 const routes = require('./routes');
 const limites = require('./middlewares/rateLimit');
 const limpiarRespuesta = require('./middlewares/limpiarRespuesta');
+const { ensureDb } = require('./config/database');
 const { notFound, errorHandler } = require('./middlewares/errorHandler');
 
 const app = express();
@@ -70,6 +71,7 @@ app.use('/api', limites.general);
 // Nada sale con el _id de Mongo dentro (ver el middleware).
 app.use('/api', limpiarRespuesta);
 
+
 /**
  * @openapi
  * /health:
@@ -84,6 +86,20 @@ app.get('/api/health', (req, res) => {
   // Solo lo justo para un monitor: ni entorno ni version ni configuracion.
   res.json({ success: true, service: 'academia-api', time: new Date().toISOString() });
 });
+
+/*
+ * La conexion a la base, garantizada antes de atender.
+ *
+ * En un servidor normal la abre el arranque (server.js). En serverless no hay
+ * arranque: la plataforma importa la aplicacion y la llama, asi que la
+ * primera peticion de cada instancia tiene que conectar. Sin esto, Mongoose
+ * encola las consultas y las corta a los diez segundos con un "buffering
+ * timed out" que no dice que falte la conexion.
+ *
+ * Va DESPUES de /api/health a proposito: un monitor tiene que poder preguntar
+ * si el proceso vive aunque la base este caida.
+ */
+app.use('/api', ensureDb);
 
 /**
  * Documentacion interactiva. Fuera de produccion por defecto: describe cada

@@ -59,7 +59,8 @@ async function sembrar() {
     process.exit(1);
   }
 
-  await connectWithRetry(5, 1000);
+  // Si ya hay conexion abierta (nos llamo preparar-atlas), se reutiliza.
+  if (mongoose.connection.readyState !== 1) await connectWithRetry(5, 1000);
   console.log(`\n  Sembrando datos inventados en "${env.db.name}"...\n`);
 
   // Base limpia: la demo se restablece entera, no se acumula.
@@ -201,10 +202,20 @@ async function sembrar() {
   console.log(`  nomina, alquiler y retiros de ${MESES.length} meses`);
   console.log('\n  Listo. Todos los nombres y montos son inventados.\n');
 
-  await mongoose.disconnect();
 }
 
-sembrar().catch((error) => {
-  console.error('[demo] Error:', error.message);
-  process.exit(1);
-});
+/*
+ * Al ejecutarlo directamente abre y cierra la conexion el mismo. Cuando lo
+ * llama preparar-atlas, la conexion ya esta abierta y la cierra quien la
+ * abrio: por eso la siembra no desconecta por su cuenta.
+ */
+if (require.main === module) {
+  sembrar()
+    .then(() => mongoose.disconnect())
+    .catch((error) => {
+      console.error('[demo] Error:', error.message);
+      process.exit(1);
+    });
+}
+
+module.exports = { sembrar };
