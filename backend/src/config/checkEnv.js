@@ -129,6 +129,30 @@ function revisar() {
    * tosco a proposito, porque la alternativa es confiar en que nadie se
    * equivoque de variable el dia del despliegue.
    */
+  /*
+   * Una cuenta que se llama "demo" en la base real.
+   *
+   * El cerrojo de abajo mira DEMO_EMAIL, pero la demostracion tambien se
+   * monta por error renombrando la cuenta del dia a dia: poner
+   * USUARIO_EMAIL=demo@... no crea un rol demo, renombra a la secretaria, y
+   * esa cuenta SI ve los datos reales. El sintoma es desconcertante porque
+   * todo "funciona": entra, y ensena los 30 alumnos de verdad.
+   *
+   * Si el correo dice demo y la base no, casi seguro es esa confusion.
+   */
+  if (!String(env.db.name || '').toLowerCase().includes('demo')) {
+    [['ADMIN_EMAIL', env.admin.email], ['USUARIO_EMAIL', env.usuario.email]]
+      // "demo" como palabra entera: demo@... o pruebas-demo@... la cazan,
+      // pero demostenes@... es un nombre y no tiene por que bloquear nada.
+      .filter(([, correo]) => /(^|[^a-z])demo([^a-z]|$)/i.test(String(correo || '')))
+      .forEach(([etiqueta, correo]) => {
+        graves.push(
+          `${etiqueta} es "${correo}" pero DB_NAME es "${env.db.name}": esa cuenta `
+          + 'veria los datos reales. La demostracion se monta con DEMO_EMAIL y su propia base.'
+        );
+      });
+  }
+
   if (env.demo.email && env.demo.password) {
     const nombre = String(env.db.name || '').toLowerCase();
     if (!nombre.includes('demo')) {

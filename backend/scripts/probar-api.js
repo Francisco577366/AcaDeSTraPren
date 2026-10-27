@@ -207,6 +207,29 @@ async function pedir(ruta, { metodo = 'GET', body, token = tokenAdmin } = {}) {
     const propia = await pedir('/activity', { token: tokenUsuario });
     ok(propia.estado === 200 && propia.cuerpo?.totales?.registros === 0, 'la suya si, y esta vacia');
 
+    console.log('\n9b. Las filas llegan enteras al navegador');
+    /*
+     * Hubo un fallo en el que el filtro de salida vaciaba los documentos de
+     * Mongoose: las tarjetas de totales salian bien, porque vienen de una
+     * agregacion, y la tabla salia en blanco con todo "undefined". Se noto
+     * solo en pagos personales, el unico modulo sin serialize propio.
+     */
+    r = await pedir('/personal-payments', {
+      metodo: 'POST',
+      body: { concept: 'Retiro de prueba', amount: 50, currency: 'USD', paymentDate: '2026-10-15' },
+    });
+    ok(r.estado === 201, `se registra un retiro (${r.estado})`);
+
+    r = await pedir('/personal-payments?limit=10');
+    const retiro = (r.cuerpo || [])[0];
+    ok(retiro?.id !== undefined && retiro?.concept !== undefined && retiro?.amount !== undefined,
+      'y el listado lo devuelve entero, no en blanco');
+    ok(!('_id' in (retiro || {})), 'sin el _id de Mongo dentro');
+    ok(/^PER-\d{6}$/.test(retiro?.receiptNumber || ''), `con su correlativo (${retiro?.receiptNumber})`);
+
+    const borrado = await pedir(`/personal-payments/${retiro?.id}`, { metodo: 'DELETE' });
+    ok(borrado.estado === 200, `y se puede borrar por su id (${borrado.estado})`);
+
     console.log('\n10. Anular y restaurar');
     r = await pedir(`/payments/${mensualidad.id}/void`, { metodo: 'POST', body: { reason: 'prueba' } });
     ok(r.cuerpo?.status === 'anulado', `el cobro queda ${r.cuerpo?.status}`);

@@ -20,6 +20,20 @@ function quitarIds(valor) {
   if (valor && typeof valor === 'object') {
     // Las fechas y demas objetos con forma propia se dejan como estan.
     if (valor instanceof Date || Buffer.isBuffer(valor)) return valor;
+
+    /*
+     * Un documento de Mongoose primero se convierte, y luego se recorre.
+     *
+     * Object.keys() sobre un documento NO devuelve sus campos sino sus
+     * tripas ($__, _doc), asi que recorrerlo directamente lo vacia entero.
+     * Eso dejo la pantalla de pagos personales con todas las filas en blanco
+     * mientras los totales de arriba, que salen de una agregacion y no de
+     * documentos, seguian bien.
+     *
+     * res.json acaba llamando a toJSON por su cuenta al serializar, pero
+     * nosotros llegamos antes: hay que llamarlo aqui.
+     */
+    if (typeof valor.toJSON === 'function') return quitarIds(valor.toJSON());
     const salida = {};
     Object.keys(valor).forEach((clave) => {
       if (clave === '_id' || clave === '__v') return;
