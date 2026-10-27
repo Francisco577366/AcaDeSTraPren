@@ -52,7 +52,10 @@ jobs:
           # Vite resuelve esto AL CONSTRUIR: queda dentro del bundle, y de la
           # CSP. Si VITE_API_URL falta o esta mal, el navegador cortara las
           # llamadas al API y la pagina saldra vacia sin decir por que.
-          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          # vars o secrets: la URL del API no es secreta (va dentro del
+          # bundle igual), pero el sitio natural para ponerla confunde, asi
+          # que se aceptan los dos.
+          VITE_API_URL: ${{ vars.VITE_API_URL || secrets.VITE_API_URL }}
           # Pages sirve el proyecto en /nombre-del-repositorio/, no en la raiz.
           VITE_BASE_PATH: /${{ github.event.repository.name }}/
         run: npm run build
@@ -63,8 +66,19 @@ jobs:
         working-directory: frontend
         run: |
           if ! grep -q "connect-src 'self' https://" dist/index.html; then
-            echo "VITE_API_URL no llego al build."
-            echo "Ponla en Settings > Secrets and variables > Actions > Variables."
+            echo '================================================================'
+            echo 'VITE_API_URL no llego al build, asi que la web quedaria muerta:'
+            echo 'el navegador cortaria las llamadas al API por politica de'
+            echo 'seguridad, sin decir por que. Por eso se para aqui.'
+            echo ''
+            echo 'Creala en:'
+            echo '  Settings > Secrets and variables > Actions'
+            echo '  pestana Variables (o Secrets, las dos valen)'
+            echo ''
+            echo 'Nombre exacto: VITE_API_URL'
+            echo 'Valor:         https://TU-PROYECTO.vercel.app/api'
+            echo '               (con /api al final, y sin barra despues)'
+            echo '================================================================'
             exit 1
           fi
           echo "API en la CSP:"
