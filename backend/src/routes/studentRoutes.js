@@ -5,7 +5,8 @@ const { authenticate, authorize } = require('../middlewares/auth');
 const ctrl = require('../controllers/studentController');
 
 const router = Router();
-router.use(authenticate);
+// los alumnos: fuera del alcance de quien solo atiende la libreria.
+router.use(authenticate, authorize('admin', 'usuario', 'demo'));
 
 // Solo el nombre es obligatorio; el resto son datos opcionales del alumno.
 const rules = [

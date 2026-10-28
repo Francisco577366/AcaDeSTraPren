@@ -17,7 +17,8 @@
     "probar:demo": "node scripts/probar-demo.js",
     "revisar:produccion": "node scripts/revisar-produccion.js",
     "atlas:preparar": "node scripts/preparar-atlas.js",
-    "atlas:demo": "node scripts/preparar-atlas.js demo"
+    "atlas:demo": "node scripts/preparar-atlas.js demo",
+    "probar:libreria": "node scripts/probar-libreria.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

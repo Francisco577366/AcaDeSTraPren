@@ -5,7 +5,8 @@ const { authenticate, authorize } = require('../middlewares/auth');
 const ctrl = require('../controllers/paymentController');
 
 const router = Router();
-router.use(authenticate);
+// los cobros de mensualidades: fuera del alcance de quien solo atiende la libreria.
+router.use(authenticate, authorize('admin', 'usuario', 'demo'));
 
 const rules = [
   body('studentId').isInt({ min: 1 }).withMessage('Debes indicar el alumno'),
