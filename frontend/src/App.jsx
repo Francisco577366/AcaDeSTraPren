@@ -31,6 +31,19 @@ function Protected({ children }) {
 }
 
 /**
+ * Secciones que no son de la libreria.
+ *
+ * Quien atiende el mostrador no tiene nada que hacer en alumnos, cobranza o
+ * trabajos: el API se las rechaza, asi que aqui se le devuelve a lo suyo en
+ * vez de dejarle ver una pantalla que se llenaria de errores.
+ */
+function FueraDeLibreria({ children }) {
+  const user = useSelector((s) => s.auth.user);
+  if (user?.role === 'libreria') return <Navigate to="/libreria" replace />;
+  return children;
+}
+
+/**
  * Secciones del administrador. Esconder el enlace en el menu no basta:
  * escribiendo la direccion a mano la pagina cargaria igual y se llenaria de
  * errores al llamar al API. Esto no es la seguridad (esa la hace el API, que
@@ -63,11 +76,11 @@ export default function App() {
         }
       >
         <Route index element={<Dashboard />} />
-        <Route path="alumnos" element={<Students />} />
-        <Route path="profesores" element={<Teachers />} />
-        <Route path="pagos" element={<Payments />} />
+        <Route path="alumnos" element={<FueraDeLibreria><Students /></FueraDeLibreria>} />
+        <Route path="profesores" element={<FueraDeLibreria><Teachers /></FueraDeLibreria>} />
+        <Route path="pagos" element={<FueraDeLibreria><Payments /></FueraDeLibreria>} />
         <Route path="nomina" element={<SoloAdmin><Payroll /></SoloAdmin>} />
-        <Route path="trabajos" element={<Works />} />
+        <Route path="trabajos" element={<FueraDeLibreria><Works /></FueraDeLibreria>} />
         <Route path="libreria" element={<Library />} />
         <Route path="alquiler" element={<SoloAdmin><Rent /></SoloAdmin>} />
         <Route path="personales" element={<SoloAdmin><Personal /></SoloAdmin>} />

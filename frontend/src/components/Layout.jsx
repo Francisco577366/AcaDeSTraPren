@@ -23,17 +23,29 @@ const DOCS_URL = `${import.meta.env.VITE_API_URL || '/api'}/docs`;
  * al abrirlas van a dar un error.
  */
 const NAV = [
-  { to: '/', label: 'Panel', icon: IconDashboard, end: true },
+  { to: '/', label: 'Panel', icon: IconDashboard, end: true, libreria: true },
   { to: '/alumnos', label: 'Alumnos', icon: IconStudent },
   { to: '/profesores', label: 'Profesores', icon: IconTeacher },
   { to: '/pagos', label: 'Pagos', icon: IconMoney },
   { to: '/nomina', label: 'Nomina', icon: IconWallet, soloAdmin: true },
   { to: '/trabajos', label: 'Trabajos', icon: IconTool },
-  { to: '/libreria', label: 'Libreria', icon: IconBook },
+  { to: '/libreria', label: 'Libreria', icon: IconBook, libreria: true },
   { to: '/alquiler', label: 'Alquiler', icon: IconHome, soloAdmin: true },
   { to: '/personales', label: 'Pagos personales', icon: IconUsers, soloAdmin: true },
-  { to: '/actividad', label: 'Actividad', icon: IconReceipt },
+  { to: '/actividad', label: 'Actividad', icon: IconReceipt, libreria: true },
 ];
+
+/**
+ * Que secciones ve cada rol.
+ *
+ * Quien atiende la libreria tiene su propia lista, y es la contraria de las
+ * demas: en vez de quitarle lo prohibido se le da solo lo suyo. Asi, una
+ * seccion nueva no aparece en su menu por descuido.
+ */
+function seccionesDe(rol) {
+  if (rol === 'libreria') return NAV.filter((i) => i.libreria);
+  return NAV.filter((i) => !i.soloAdmin || rol === 'admin');
+}
 
 function Toasts() {
   const toasts = useSelector((s) => s.ui.toasts);
@@ -64,7 +76,6 @@ export default function Layout() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const user = useSelector((s) => s.auth.user);
-  const esAdmin = user?.role === 'admin';
   const sidebarOpen = useSelector((s) => s.ui.sidebarOpen);
   const optionsLoaded = useSelector((s) => s.options.loaded);
   const serverPeriod = useSelector((s) => s.options.settings.period);
@@ -100,7 +111,7 @@ export default function Layout() {
         </div>
 
         <nav className="nav">
-          {NAV.filter((i) => !i.soloAdmin || esAdmin).map(({ to, label: text, icon: Icon, end }) => (
+          {seccionesDe(user?.role).map(({ to, label: text, icon: Icon, end }) => (
             <NavLink
               key={to}
               to={to}

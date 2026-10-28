@@ -9,7 +9,7 @@ const currencyFormatter = new Intl.NumberFormat('es-VE', {
 /**
  * Formatea un monto con el simbolo de la moneda configurada.
  *
- * El formato local pega el signo a la moneda —"USD-210,00"— y a simple vista
+ * El formato local pega el signo a la moneda ("USD-210,00") y a simple vista
  * se lee como si fuera positivo, justo en las cifras donde mas importa el
  * signo (un resultado del mes en rojo). Por eso el menos va delante de todo.
  */
@@ -146,7 +146,7 @@ export const LABELS = {
     pendiente: 'Por cobrar', parcial: 'Abono parcial', pagado: 'Pagada', anulado: 'Anulada',
   },
   gender: { M: 'Masculino', F: 'Femenino', otro: 'Otro' },
-  role: { admin: 'Administrador', usuario: 'Usuario' },
+  role: { admin: 'Administrador', usuario: 'Usuario', demo: 'Demostracion', libreria: 'Libreria' },
 };
 
 /** Color semantico asociado a cada estado, usado por el componente Badge. */
