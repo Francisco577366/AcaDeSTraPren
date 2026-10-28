@@ -13,6 +13,8 @@ const { exportData, importData, hasDataset, isEmpty, DATA_FILE } = require('./da
  *            alquiler, ni los retiros personales, ni la ganancia.
  *   demo     Una visita. Lo mismo que usuario, pero su cuenta es publica y
  *            solo existe en el despliegue de demostracion, contra su base.
+ *   libreria Quien atiende el mostrador: vende y ajusta inventario, y nada
+ *            mas de la academia.
  *
  * La del usuario solo se crea si hay contrasena definida: una cuenta con
  * clave conocida es peor que no tener la cuenta.
@@ -26,6 +28,9 @@ function cuentasDefinidas() {
   }
   if (env.demo.email && env.demo.password) {
     cuentas.push({ ...env.demo, role: 'demo' });
+  }
+  if (env.libreria.email && env.libreria.password) {
+    cuentas.push({ ...env.libreria, role: 'libreria' });
   }
   return cuentas;
 }

@@ -96,6 +96,15 @@ const env = {
     email: process.env.DEMO_EMAIL || null,
     password: process.env.DEMO_PASSWORD || null,
   },
+  /**
+   * Quien atiende el mostrador de la libreria: vende, cobra lo pendiente y
+   * ajusta inventario. No ve nada del resto de la academia.
+   */
+  libreria: {
+    name: process.env.LIBRERIA_NAME || 'Libreria',
+    email: process.env.LIBRERIA_EMAIL || null,
+    password: process.env.LIBRERIA_PASSWORD || null,
+  },
   currency: process.env.CURRENCY || 'USD',
   /** Mensualidad estandar de la academia; el alta de alumnos parte de aqui. */
   baseMonthlyFee: Number(process.env.BASE_MONTHLY_FEE || 70),

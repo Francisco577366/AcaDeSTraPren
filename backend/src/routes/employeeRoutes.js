@@ -5,7 +5,8 @@ const { authenticate, authorize } = require('../middlewares/auth');
 const ctrl = require('../controllers/employeeController');
 
 const router = Router();
-router.use(authenticate);
+// el personal de la libreria y sus datos: fuera del alcance de quien solo atiende la libreria.
+router.use(authenticate, authorize('admin', 'usuario', 'demo'));
 
 const rules = [
   body('firstName').trim().notEmpty().withMessage('El nombre es obligatorio'),

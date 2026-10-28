@@ -6,6 +6,9 @@
  *            la libreria y consulta quien debe.
  *   demo     Una visita. Ve y prueba lo mismo que un usuario, pero su cuenta
  *            es publica y compartida.
+ *   libreria Quien atiende el mostrador de la libreria: vende, cobra lo
+ *            pendiente y ajusta inventario. No ve nada del resto de la
+ *            academia: ni alumnos, ni mensualidades, ni nomina.
  *
  * Entre admin y usuario la diferencia no es "uno puede mas que otro" sino que
  * hay informacion del negocio que no es asunto de quien atiende el mostrador:
@@ -19,7 +22,7 @@
  * menos permisos sobre los mismos datos seguiria siendo una fuga esperando a
  * que alguien se equivoque en un filtro.
  */
-const ROLES = ['admin', 'usuario', 'demo'];
+const ROLES = ['admin', 'usuario', 'demo', 'libreria'];
 const ROL_POR_DEFECTO = 'usuario';
 
 /**
@@ -48,6 +51,9 @@ const esAdmin = (user) => normalizarRol(user?.role) === 'admin';
  * dejaria fuera a todos los demas visitantes.
  */
 const esDemo = (user) => normalizarRol(user?.role) === 'demo';
+
+/** Quien atiende la libreria. Su mundo empieza y acaba en ese modulo. */
+const esLibreria = (user) => normalizarRol(user?.role) === 'libreria';
 
 /**
  * Lo que solo ve el administrador, dicho una vez.
@@ -116,6 +122,19 @@ function recortarMargen(valor, user) {
 }
 
 /**
+ * Del panel, lo que ve quien atiende la libreria.
+ *
+ * Mucho menos que un usuario normal: su trabajo no toca alumnos ni cobranza,
+ * asi que la deuda de los alumnos y lo facturado del mes no le dicen nada y
+ * no tienen por que llegarle. Se queda con sus ventas y con la tasa del dia,
+ * que la necesita porque la libreria cobra en bolivares.
+ */
+const PANEL_LIBRERIA = {
+  debt: ['library', 'libraryBs', 'libraryCount', 'libraryConverted'],
+  library: ['salesCount', 'total', 'paid', 'pending', 'profit', 'currency'],
+};
+
+/**
  * Campos de sueldo de profesores y personal. Quien atiende necesita la LISTA
  * de profesores para asignar un trabajo, pero no lo que cobra cada uno.
  */
@@ -143,6 +162,20 @@ function soloPermitido(objeto, permitidas) {
  */
 function recortarPanel(data, user) {
   if (esAdmin(user)) return data;
+
+  // Quien atiende la libreria ve aun menos que un usuario normal: solo lo
+  // suyo. Va antes del recorte general porque es mas estrecho, no otra cosa.
+  if (esLibreria(user)) {
+    return {
+      period: data.period,
+      counts: {},
+      finance: {},
+      debt: soloPermitido(data.debt, PANEL_LIBRERIA.debt),
+      works: {},
+      library: soloPermitido(data.library, PANEL_LIBRERIA.library),
+      exchangeRate: data.exchangeRate,
+    };
+  }
 
   return {
     period: data.period,
@@ -186,6 +219,7 @@ module.exports = {
   normalizarRol,
   esAdmin,
   esDemo,
+  esLibreria,
   recortarPanel,
   recortarMargen,
   CAMPOS_MARGEN,
@@ -193,4 +227,5 @@ module.exports = {
   recortarSueldos,
   CAMPOS_SUELDO,
   PANEL_USUARIO,
+  PANEL_LIBRERIA,
 };
