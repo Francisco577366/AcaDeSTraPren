@@ -719,6 +719,28 @@ code {
 .login-form .field-label { margin-top: 8px; }
 .login-hint { text-align: center; margin-top: 18px; color: var(--text-muted); font-size: 0.76rem; }
 
+/* Datos de acceso de la demostracion. user-select: all para que un toque
+   seleccione el valor entero: muchos visitantes llegan desde el movil. */
+.demo-datos {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 16px;
+  margin: 10px 0 16px;
+  padding: 12px 14px;
+  background: var(--accent-soft);
+  border-radius: var(--radius-sm);
+}
+.demo-datos dt { color: var(--text-soft); font-size: 0.8rem; align-self: center; }
+.demo-datos dd {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+  color: var(--text);
+  word-break: break-all;
+  user-select: all;
+}
+.login-card > .btn-ghost { margin-top: 14px; }
+
 .only-mobile { display: none; }
 
 /* ---------------------------------------------------------------- */

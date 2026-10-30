@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Navigate } from 'react-router-dom';
 import { login, clearError } from '../store/slices/authSlice';
 import { ErrorBanner } from '../components/ui';
+import AvisoDemo from '../components/AvisoDemo';
 
 export default function Login() {
   const dispatch = useDispatch();
@@ -61,6 +62,8 @@ export default function Login() {
           </button>
         </form>
 
+        {/* Solo se pinta en el despliegue de demostracion. */}
+        <AvisoDemo onEntrar={(datos) => dispatch(login(datos))} entrando={loading} />
       </div>
     </div>
   );

@@ -27,15 +27,23 @@ import react from '@vitejs/plugin-react';
  * etiqueta meta el navegador las ignora, solo valen como cabecera HTTP, y
  * GitHub Pages no permite anadir cabeceras. Queda anotado en el README.
  */
-function politicaCsp(apiUrl) {
-  let origenApi = '';
-  try {
-    // Del API solo hace falta el origen, no la ruta: connect-src no entiende
-    // de rutas y una URL con /api dentro invalidaria la directiva.
-    origenApi = apiUrl ? new URL(apiUrl).origin : '';
-  } catch {
-    origenApi = '';
-  }
+function politicaCsp(apiUrls) {
+  // Del API solo hace falta el origen, no la ruta: connect-src no entiende de
+  // rutas y una URL con /api dentro invalidaria la directiva.
+  const origenDe = (url) => {
+    try {
+      return url ? new URL(url).origin : '';
+    } catch {
+      return '';
+    }
+  };
+
+  /*
+   * Es una sola, pero se admite lista: la demostracion comparte API con la
+   * academia (el backend separa por base, no por dominio) y aqui no hay nada
+   * que anadir. Queda asi por si algun dia el API se parte en dos.
+   */
+  const origenApi = [...new Set(apiUrls.map(origenDe).filter(Boolean))].join(' ');
 
   return [
     "default-src 'none'",
@@ -53,7 +61,7 @@ function politicaCsp(apiUrl) {
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const csp = politicaCsp(env.VITE_API_URL);
+  const csp = politicaCsp([env.VITE_API_URL]);
 
   return {
     /**

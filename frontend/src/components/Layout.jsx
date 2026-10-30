@@ -23,7 +23,7 @@ const DOCS_URL = `${import.meta.env.VITE_API_URL || '/api'}/docs`;
  * al abrirlas van a dar un error.
  */
 const NAV = [
-  { to: '/', label: 'Panel', icon: IconDashboard, end: true, libreria: true },
+  { to: '/', label: 'Panel', icon: IconDashboard, end: true },
   { to: '/alumnos', label: 'Alumnos', icon: IconStudent },
   { to: '/profesores', label: 'Profesores', icon: IconTeacher },
   { to: '/pagos', label: 'Pagos', icon: IconMoney },
@@ -31,8 +31,9 @@ const NAV = [
   { to: '/trabajos', label: 'Trabajos', icon: IconTool },
   { to: '/libreria', label: 'Libreria', icon: IconBook, libreria: true },
   { to: '/alquiler', label: 'Alquiler', icon: IconHome, soloAdmin: true },
-  { to: '/personales', label: 'Pagos personales', icon: IconUsers, soloAdmin: true },
-  { to: '/actividad', label: 'Actividad', icon: IconReceipt, libreria: true },
+  // La visita tambien: lo que registra ahi son sus propios gastos inventados.
+  { to: '/personales', label: 'Pagos personales', icon: IconUsers, soloAdmin: true, demo: true },
+  { to: '/actividad', label: 'Actividad', icon: IconReceipt },
 ];
 
 /**
@@ -44,7 +45,10 @@ const NAV = [
  */
 function seccionesDe(rol) {
   if (rol === 'libreria') return NAV.filter((i) => i.libreria);
-  return NAV.filter((i) => !i.soloAdmin || rol === 'admin');
+  if (rol === 'admin') return NAV;
+  // La visita ve lo del dia a dia y, ademas, lo que este marcado para ella.
+  if (rol === 'demo') return NAV.filter((i) => !i.soloAdmin || i.demo);
+  return NAV.filter((i) => !i.soloAdmin);
 }
 
 function Toasts() {

@@ -1,5 +1,14 @@
 import axios from 'axios';
 
+/*
+ * Un solo API.
+ *
+ * La separacion entre la academia y la cuenta de visita NO se hace aqui: la
+ * hace el backend, mandando cada peticion a una base u otra segun la base
+ * que viene firmada dentro del token. Desde el navegador no hay nada que
+ * elegir, y eso es bueno: lo que el cliente no decide, el cliente no lo
+ * puede torcer.
+ */
 const baseURL = import.meta.env.VITE_API_URL || '/api';
 
 export const TOKEN_KEY = 'academia_token';
