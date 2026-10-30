@@ -33,9 +33,13 @@ function Protected({ children }) {
 /**
  * Secciones que no son de la libreria.
  *
- * Quien atiende el mostrador no tiene nada que hacer en alumnos, cobranza o
- * trabajos: el API se las rechaza, asi que aqui se le devuelve a lo suyo en
- * vez de dejarle ver una pantalla que se llenaria de errores.
+ * Quien atiende el mostrador no tiene nada que hacer en el resto de la
+ * academia, ni siquiera en el panel: el API le rechaza esas rutas, asi que
+ * aqui se le devuelve a lo suyo en vez de dejarle ver una pantalla que se
+ * llenaria de errores.
+ *
+ * Envuelve TODAS las rutas menos /libreria. Esconder el enlace del menu no
+ * basta: escribiendo la direccion a mano la pagina cargaria igual.
  */
 function FueraDeLibreria({ children }) {
   const user = useSelector((s) => s.auth.user);
@@ -52,6 +56,20 @@ function FueraDeLibreria({ children }) {
 function SoloAdmin({ children }) {
   const user = useSelector((s) => s.auth.user);
   if (user?.role !== 'admin') return <Navigate to="/" replace />;
+  return children;
+}
+
+/**
+ * Como SoloAdmin, pero deja pasar tambien a la cuenta de visita.
+ *
+ * Lo que esta detras son los pagos personales. Al administrador le muestran
+ * sus retiros de verdad; a la visita, los que ella misma se invente. El API
+ * ya solo le devuelve los suyos, asi que la pantalla sale llena de lo suyo y
+ * de nada mas.
+ */
+function AdminODemo({ children }) {
+  const user = useSelector((s) => s.auth.user);
+  if (user?.role !== 'admin' && user?.role !== 'demo') return <Navigate to="/" replace />;
   return children;
 }
 
@@ -75,7 +93,7 @@ export default function App() {
           </Protected>
         }
       >
-        <Route index element={<Dashboard />} />
+        <Route index element={<FueraDeLibreria><Dashboard /></FueraDeLibreria>} />
         <Route path="alumnos" element={<FueraDeLibreria><Students /></FueraDeLibreria>} />
         <Route path="profesores" element={<FueraDeLibreria><Teachers /></FueraDeLibreria>} />
         <Route path="pagos" element={<FueraDeLibreria><Payments /></FueraDeLibreria>} />
@@ -83,8 +101,8 @@ export default function App() {
         <Route path="trabajos" element={<FueraDeLibreria><Works /></FueraDeLibreria>} />
         <Route path="libreria" element={<Library />} />
         <Route path="alquiler" element={<SoloAdmin><Rent /></SoloAdmin>} />
-        <Route path="personales" element={<SoloAdmin><Personal /></SoloAdmin>} />
-        <Route path="actividad" element={<Actividad />} />
+        <Route path="personales" element={<AdminODemo><Personal /></AdminODemo>} />
+        <Route path="actividad" element={<FueraDeLibreria><Actividad /></FueraDeLibreria>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
