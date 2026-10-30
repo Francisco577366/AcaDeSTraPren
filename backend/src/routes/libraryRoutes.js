@@ -158,7 +158,7 @@ router
   .route('/products/:id')
   .get(products.getOne)
   .put(productRules, validate, products.update)
-  .delete(authorize('admin'), products.remove);
+  .delete(authorize('admin', 'demo'), products.remove);
 
 /* ------------------------------------------------------------------ */
 /* Ventas                                                              */
@@ -280,7 +280,7 @@ router.post('/sales/:id/settle', [body('amount').isFloat({ gt: 0 })], validate, 
  *     responses:
  *       200: { description: Venta anulada y stock devuelto }
  */
-router.post('/sales/:id/void', authorize('admin'), sales.voidSale);
+router.post('/sales/:id/void', authorize('admin', 'demo'), sales.voidSale);
 
 /**
  * @openapi
@@ -307,6 +307,6 @@ router.post('/sales/:id/void', authorize('admin'), sales.voidSale);
  *     responses:
  *       200: { description: Venta eliminada }
  */
-router.route('/sales/:id').get(sales.getOne).delete(authorize('admin'), sales.remove);
+router.route('/sales/:id').get(sales.getOne).delete(authorize('admin', 'demo'), sales.remove);
 
 module.exports = router;

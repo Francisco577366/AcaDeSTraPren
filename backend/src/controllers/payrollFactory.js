@@ -7,6 +7,7 @@ const { updateRecord } = require('../utils/persist');
 const { weeksForPeriod } = require('../utils/payroll');
 const { createCrudController } = require('./crudFactory');
 const { peekNextId } = require('../models/plugins/autoIncrement');
+const { conFiltro } = require('../models/plugins/demo');
 
 const MONTHS = [
   'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
@@ -152,10 +153,16 @@ function createPayrollController(cfg) {
         // El nombre vive en otra coleccion: se trae aqui en vez de con una
         // consulta por persona.
         {
+          /*
+           * Forma con pipeline y no con localField: es la unica que admite un
+           * $match, y aqui hace falta para que la academia y el cajon de
+           * pruebas no se crucen los nombres. El sub-pipeline de un $lookup
+           * no pasa por los hooks del modelo.
+           */
           $lookup: {
             from: Persona.collection.name,
-            localField: '_id',
-            foreignField: 'id',
+            let: { persona: '$_id' },
+            pipeline: [{ $match: conFiltro({ $expr: { $eq: ['$id', '$$persona'] } }) }],
             as: 'persona',
           },
         },

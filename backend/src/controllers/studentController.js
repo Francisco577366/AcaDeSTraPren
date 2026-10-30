@@ -9,6 +9,7 @@ const { createCrudController } = require('./crudFactory');
 const { mongoose } = require('../models');
 const { peekNextId } = require('../models/plugins/autoIncrement');
 const { Student, StudentWork, Payment } = require('../models');
+const { conFiltro } = require('../models/plugins/demo');
 
 const MONTHS = [
   'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
@@ -569,10 +570,13 @@ const debtors = asyncHandler(async (req, res) => {
     { $sort: { balance: -1 } },
     { $limit: limit },
     {
+      // Con pipeline para poder filtrar: el sub-pipeline de un $lookup no
+      // pasa por los hooks del modelo. Es el cruce mas delicado de los seis,
+      // porque lo que trae son NOMBRES de alumnos.
       $lookup: {
         from: Student.collection.name,
-        localField: '_id',
-        foreignField: 'id',
+        let: { alumno: '$_id' },
+        pipeline: [{ $match: conFiltro({ $expr: { $eq: ['$id', '$$alumno'] } }) }],
         as: 'alumno',
       },
     },

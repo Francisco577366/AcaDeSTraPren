@@ -127,6 +127,6 @@ router.get('/:id/profile', authorize('admin'), ctrl.profile);
  *     responses:
  *       200: { description: Trabajador eliminado }
  */
-router.route('/:id').get(ctrl.getOne).put(rules, validate, ctrl.update).delete(authorize('admin'), ctrl.remove);
+router.route('/:id').get(ctrl.getOne).put(rules, validate, ctrl.update).delete(authorize('admin', 'demo'), ctrl.remove);
 
 module.exports = router;

@@ -284,6 +284,6 @@ router.post('/:id/charge', ctrl.createCharge);
  *     responses:
  *       200: { description: Alumno eliminado }
  */
-router.route('/:id').get(ctrl.getOne).put(rules, validate, ctrl.update).delete(authorize('admin'), ctrl.remove);
+router.route('/:id').get(ctrl.getOne).put(rules, validate, ctrl.update).delete(authorize('admin', 'demo'), ctrl.remove);
 
 module.exports = router;

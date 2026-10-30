@@ -43,7 +43,15 @@ const schema = crearEsquema(
      */
     passwordChangedAt: { type: Date, default: null },
   },
-  { coleccion: 'users' }
+  /*
+   * marcar: false -> las cuentas NO se separan en dos mundos.
+   *
+   * Al entrar todavia no se sabe quien es quien, asi que el usuario hay que
+   * poder encontrarlo venga de donde venga. Y no hace falta: lo que la cuenta
+   * de visita puede ver se decide por su rol, y el listado de usuarios es
+   * solo del administrador.
+   */
+  { coleccion: 'users', marcar: false }
 );
 
 schema.pre('save', async function antesDeGuardar(next) {

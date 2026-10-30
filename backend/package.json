@@ -11,14 +11,16 @@
     "seed": "node src/seed/bootstrap.js export",
     "seed:load": "node src/seed/bootstrap.js load",
     "seed:restore": "node src/seed/bootstrap.js restore",
-    "probar:cuentas": "node scripts/probar-cuentas.js",
-    "probar:api": "node scripts/probar-api.js",
+    "probar:cuentas": "node scripts/con-memoria.js probar-cuentas.js",
+    "probar:api": "node scripts/con-memoria.js probar-api.js",
     "demo:sembrar": "node scripts/sembrar-demo.js",
-    "probar:demo": "node scripts/probar-demo.js",
+    "probar:demo": "node scripts/con-memoria.js probar-demo.js",
     "revisar:produccion": "node scripts/revisar-produccion.js",
     "atlas:preparar": "node scripts/preparar-atlas.js",
     "atlas:demo": "node scripts/preparar-atlas.js demo",
-    "probar:libreria": "node scripts/probar-libreria.js"
+    "probar:libreria": "node scripts/con-memoria.js probar-libreria.js",
+    "probar:aislamiento": "node scripts/probar-aislamiento.js",
+    "probar:endpoints": "node scripts/con-memoria.js probar-endpoints.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

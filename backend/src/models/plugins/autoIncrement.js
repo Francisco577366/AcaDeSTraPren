@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { esSesionDemo } = require('../../config/contexto');
 
 /**
  * Contador por coleccion. Un solo documento por coleccion con el ultimo id
@@ -14,6 +15,33 @@ const Counter = mongoose.model(
     { versionKey: false }
   )
 );
+
+/**
+ * Donde empiezan los ids de la cuenta de visita.
+ *
+ * Compartir base obliga a esto. Si el cajon de pruebas gastara el contador de
+ * la academia, cada alumno que inventara un visitante dejaria un hueco en la
+ * numeracion de los recibos reales: el representante tendria el REC-000066 y
+ * el siguiente seria el REC-000070, sin nada en medio que explicarle.
+ *
+ * Y si las dos numeraciones empezaran en 1 chocarian, porque el id es unico
+ * en la coleccion: el alumno 1 del visitante contra el alumno 1 de verdad.
+ *
+ * Asi que son dos cuentas separadas —cada mundo tiene su documento contador—
+ * y la del visitante vive un millon mas arriba. Un recibo suyo se lee
+ * REC-1000001 a simple vista, que para una demostracion esta bien: deja claro
+ * que no es un recibo de la academia.
+ */
+const DESPLAZAMIENTO = 1000000;
+
+/** El documento contador que le toca a este mundo. */
+const claveDe = (coleccion, demo) => (demo ? `${coleccion}__demo` : coleccion);
+
+/** Del numero del contador al id que se guarda. */
+const aId = (seq, demo) => (demo ? DESPLAZAMIENTO + seq : seq);
+
+/** Y al reves, para reponer el contador desde los ids que ya existen. */
+const aSeq = (id, demo) => (demo ? id - DESPLAZAMIENTO : id);
 
 /**
  * Ids numericos correlativos, como los de MySQL.
@@ -35,12 +63,19 @@ function autoIncrement(schema, { coleccion }) {
   schema.pre('validate', async function asignarId(next) {
     if (!this.isNew || this.id != null) return next();
     try {
+      /*
+       * La marca del propio documento, no la de la sesion. Dan lo mismo en
+       * una peticion normal, pero esta no puede equivocarse: el plugin de la
+       * marca corre antes que este, asi que a estas alturas el documento ya
+       * sabe de que mundo es.
+       */
+      const demo = this.demo === true;
       const contador = await Counter.findByIdAndUpdate(
-        coleccion,
+        claveDe(coleccion, demo),
         { $inc: { seq: 1 } },
         { new: true, upsert: true }
       );
-      this.id = contador.seq;
+      this.id = aId(contador.seq, demo);
       return next();
     } catch (error) {
       return next(error);
@@ -55,16 +90,29 @@ function autoIncrement(schema, { coleccion }) {
  */
 async function syncCounter(coleccion, ultimoId) {
   if (!ultimoId) return;
-  const actual = await Counter.findById(coleccion);
-  if (!actual || actual.seq < ultimoId) {
-    await Counter.findByIdAndUpdate(coleccion, { seq: ultimoId }, { upsert: true });
+  const demo = esSesionDemo();
+  const seq = aSeq(ultimoId, demo);
+  if (seq <= 0) return;
+
+  const clave = claveDe(coleccion, demo);
+  const actual = await Counter.findById(clave);
+  if (!actual || actual.seq < seq) {
+    await Counter.findByIdAndUpdate(clave, { seq }, { upsert: true });
   }
 }
 
 /** Siguiente id sin consumirlo, para construir correlativos antes de crear. */
 async function peekNextId(coleccion) {
-  const actual = await Counter.findById(coleccion);
-  return (actual ? actual.seq : 0) + 1;
+  const demo = esSesionDemo();
+  const actual = await Counter.findById(claveDe(coleccion, demo));
+  return aId((actual ? actual.seq : 0) + 1, demo);
 }
 
-module.exports = { autoIncrement, syncCounter, peekNextId, Counter };
+module.exports = {
+  autoIncrement,
+  syncCounter,
+  peekNextId,
+  Counter,
+  claveDe,
+  DESPLAZAMIENTO,
+};

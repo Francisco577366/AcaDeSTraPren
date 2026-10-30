@@ -7,6 +7,7 @@ const { recortarMargen } = require('../config/roles');
 const { createCrudController } = require('./crudFactory');
 const { peekNextId } = require('../models/plugins/autoIncrement');
 const { mongoose, Sale, SaleItem, Product } = require('../models');
+const { conFiltro } = require('../models/plugins/demo');
 
 const MONTHS = [
   'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
@@ -287,10 +288,13 @@ const summary = asyncHandler(async (req, res) => {
      */
     SaleItem.aggregate([
       {
+        // Con pipeline para poder filtrar: el sub-pipeline de un $lookup no
+        // pasa por los hooks del modelo, y sin esto un renglon de la visita
+        // podria emparejarse con una venta de la academia.
         $lookup: {
           from: Sale.collection.name,
-          localField: 'saleId',
-          foreignField: 'id',
+          let: { venta: '$saleId' },
+          pipeline: [{ $match: conFiltro({ $expr: { $eq: ['$id', '$$venta'] } }) }],
           as: 'venta',
         },
       },

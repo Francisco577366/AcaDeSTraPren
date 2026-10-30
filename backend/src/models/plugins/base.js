@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const { autoIncrement } = require('./autoIncrement');
+const { marcaDemo } = require('./demo');
 
 /**
  * Importes de dinero.
@@ -62,7 +63,7 @@ const indiceCorrelativo = (campo) => [
  * Crea un esquema con lo que comparten todas las colecciones: id numerico,
  * marcas de tiempo y una salida JSON limpia.
  */
-function crearEsquema(campos, { coleccion, indices = [], ...opciones } = {}) {
+function crearEsquema(campos, { coleccion, indices = [], marcar = true, ...opciones } = {}) {
   const schema = new mongoose.Schema(campos, {
     collection: coleccion,
     timestamps: true,
@@ -81,6 +82,22 @@ function crearEsquema(campos, { coleccion, indices = [], ...opciones } = {}) {
     },
     ...opciones,
   });
+
+  /*
+   * La marca que separa los datos de la visita de los de la academia.
+   *
+   * Por defecto la llevan TODAS las colecciones: el dia que se anada una
+   * nueva nace separada, sin que nadie tenga que acordarse. Solo las cuentas
+   * (users) se quedan fuera, con marcar: false, porque al entrar todavia no
+   * se sabe quien es quien y el usuario hay que poder encontrarlo.
+   *
+   * VA ANTES que autoIncrement, y no es un detalle de estilo: los hooks de
+   * 'validate' corren en el orden en que se registran, y el contador lee
+   * `this.demo` para saber de que numeracion sacar el id. Al reves leeria el
+   * valor por defecto y todos los registros de la visita gastarian la
+   * numeracion de la academia.
+   */
+  if (marcar) schema.plugin(marcaDemo, { coleccion });
 
   schema.plugin(autoIncrement, { coleccion });
   // Un indice puede venir solo con sus campos, o con campos y opciones

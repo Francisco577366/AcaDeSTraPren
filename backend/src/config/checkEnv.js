@@ -117,19 +117,6 @@ function revisar() {
   }
 
   /*
-   * La cuenta de demostracion y la base real no pueden convivir.
-   *
-   * Es una cuenta PUBLICA: su correo y su clave se reparten a quien quiera
-   * mirar. Si existe contra la base de la academia, los nombres de los
-   * alumnos, sus mensualidades y los retiros del dueno quedan al alcance de
-   * cualquiera. La demo va en su propio despliegue, contra su propia base,
-   * con datos inventados.
-   *
-   * La regla es el nombre de la base: tiene que decir que es la de demo. Es
-   * tosco a proposito, porque la alternativa es confiar en que nadie se
-   * equivoque de variable el dia del despliegue.
-   */
-  /*
    * Una cuenta que se llama "demo" en la base real.
    *
    * El cerrojo de abajo mira DEMO_EMAIL, pero la demostracion tambien se
@@ -138,39 +125,49 @@ function revisar() {
    * esa cuenta SI ve los datos reales. El sintoma es desconcertante porque
    * todo "funciona": entra, y ensena los 30 alumnos de verdad.
    *
-   * Si el correo dice demo y la base no, casi seguro es esa confusion.
+   * Un correo que dice "demo" en una variable que no es DEMO_EMAIL es casi
+   * siempre esa confusion.
    */
-  if (!String(env.db.name || '').toLowerCase().includes('demo')) {
-    [['ADMIN_EMAIL', env.admin.email], ['USUARIO_EMAIL', env.usuario.email]]
-      // "demo" como palabra entera: demo@... o pruebas-demo@... la cazan,
-      // pero demostenes@... es un nombre y no tiene por que bloquear nada.
-      .filter(([, correo]) => /(^|[^a-z])demo([^a-z]|$)/i.test(String(correo || '')))
-      .forEach(([etiqueta, correo]) => {
-        graves.push(
-          `${etiqueta} es "${correo}" pero DB_NAME es "${env.db.name}": esa cuenta `
-          + 'veria los datos reales. La demostracion se monta con DEMO_EMAIL y su propia base.'
-        );
-      });
-  }
-
-  if (env.demo.email && env.demo.password) {
-    const nombre = String(env.db.name || '').toLowerCase();
-    if (!nombre.includes('demo')) {
-      /*
-       * Esto va en `graves` y no en `problemas`: corta el arranque en
-       * CUALQUIER entorno, no solo en produccion.
-       *
-       * El resto de la revision mira cosas que estan mal de cara a desplegar
-       * (un secreto por defecto, un CORS abierto) y que en el portatil no
-       * hacen dano. Esta no: la base local tiene los mismos 30 alumnos
-       * reales, asi que crear aqui la cuenta publica los expone igual.
-       */
+  [['ADMIN_EMAIL', env.admin.email], ['USUARIO_EMAIL', env.usuario.email]]
+    // "demo" como palabra entera: demo@... o pruebas-demo@... la cazan, pero
+    // demostenes@... es un nombre y no tiene por que bloquear nada.
+    .filter(([, correo]) => /(^|[^a-z])demo([^a-z]|$)/i.test(String(correo || '')))
+    .forEach(([etiqueta, correo]) => {
       graves.push(
-        `Hay cuenta de demostracion pero DB_NAME es "${env.db.name}": la demo necesita su propia base (algo con "demo" en el nombre)`
+        `${etiqueta} es "${correo}", pero esa variable NO crea una cuenta de demostracion: `
+        + 'renombra la del dia a dia, que si ve los datos reales. La demo se monta con DEMO_EMAIL.'
+      );
+    });
+
+  /*
+   * La cuenta de demostracion.
+   *
+   * Es PUBLICA: su correo y su clave se reparten a quien quiera mirar, y
+   * quien entra puede ademas registrar datos. Comparte base con la academia,
+   * asi que lo que la separa de los alumnos reales es la marca `demo` que
+   * lleva cada registro y el filtro que ponen los modelos en cada consulta.
+   *
+   * Lo que se puede comprobar aqui es poco, pero es lo que mas duele si
+   * falla: que no sea la misma cuenta que otra. Si DEMO_EMAIL repitiera el
+   * correo del administrador, bootstrap le cambiaria el rol a demo y el dueno
+   * se quedaria sin su cuenta, con la clave publicada en LinkedIn.
+   *
+   * Va en `graves`, que cortan el arranque en CUALQUIER entorno.
+   */
+  if (env.demo.email && env.demo.password) {
+    const repetido = [
+      ['ADMIN_EMAIL', env.admin.email],
+      ['USUARIO_EMAIL', env.usuario.email],
+      ['LIBRERIA_EMAIL', env.libreria.email],
+    ].find(([, correo]) => correo && correo === env.demo.email);
+
+    if (repetido) {
+      graves.push(
+        `DEMO_EMAIL es "${env.demo.email}", el mismo que ${repetido[0]}: esa cuenta pasaria a ser la publica`
       );
     }
-    if (env.demo.email === env.admin.email || env.demo.email === env.usuario.email) {
-      graves.push('DEMO_EMAIL no puede repetir el correo de otra cuenta');
+    if (env.demo.password === env.admin.password) {
+      graves.push('DEMO_PASSWORD no puede ser la misma clave que la del administrador');
     }
   }
 

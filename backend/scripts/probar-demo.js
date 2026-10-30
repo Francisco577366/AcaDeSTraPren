@@ -1,156 +1,176 @@
 /* eslint-disable no-console */
 /**
- * Comprueba el despliegue de DEMOSTRACION: que la cuenta publica pueda
- * mirar y probar, que no pueda romper nada, y sobre todo que no haya ni un
- * dato de la academia real al alcance.
+ * Comprueba QUE PUEDE Y QUE NO la cuenta publica de demostracion.
  *
  *   npm run probar:demo
+ *
+ * El aislamiento —que no vea ni un dato de la academia— lo prueba
+ * probar-aislamiento.js, que es la otra mitad y la mas importante. Aqui solo
+ * se miran los permisos: que pueda ensenar la aplicacion entera sobre sus
+ * propios datos, y que no alcance lo que es de la casa y no del cajon.
  */
-process.env.MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/?directConnection=true';
-process.env.DB_NAME = process.env.DB_NAME || 'academia_demo';
-process.env.NODE_ENV = 'development';
+process.env.NODE_ENV = 'test';
+// Base desechable, y el nombre importa: mas abajo hay un dropDatabase(). Con
+// DB_NAME=academia esta suite borraria la academia de verdad.
+process.env.DB_NAME = 'academia_prueba_visita';
 process.env.SEED_ON_START = 'false';
 process.env.AUTO_MONTHLY_CHARGES = 'false';
 process.env.JWT_SECRET = 'f3a9c1d7e5b2048a6c9f1e3d7b5a208c4e6f9a1b3d5c7e9f0a2b4c6d8e0f1a3b';
 process.env.RATE_LIMIT_MAX = '5000';
-process.env.DEMO_EMAIL = 'demo@demo.academia';
-process.env.DEMO_PASSWORD = 'VerLaDemo2026';
+process.env.LOGIN_RATE_LIMIT_MAX = '500';
+process.env.ADMIN_EMAIL = 'admin@academia.com';
+process.env.ADMIN_PASSWORD = 'Clave-Admin-Larga-2026';
+process.env.DEMO_NAME = 'Visita';
+process.env.DEMO_EMAIL = 'demo@academia.com';
+process.env.DEMO_PASSWORD = 'Clave-Visita-Larga-26';
 
 const { connectWithRetry, mongoose } = require('../src/config/database');
 const app = require('../src/app');
+const { run } = require('../src/seed/bootstrap');
 
 let fallos = 0;
-const ok = (c, t) => { console.log((c ? '  OK   ' : '  FALLA') + ' ' + t); if (!c) fallos += 1; };
+const ok = (c, t) => {
+  console.log(`${c ? '  OK   ' : '  FALLA'} ${t}`);
+  if (!c) fallos += 1;
+};
 
 const PUERTO = 4788;
 const API = `http://127.0.0.1:${PUERTO}/api`;
 
-/** Nombres reales de la academia que NO pueden aparecer en la demo. */
-const NOMBRES_REALES = [
-  'Andreina', 'Lugo', 'joshua', 'Estefani', 'arlenis', 'Jadiel',
-  'Sarahi', 'Gonzalo', 'Amanda', 'Neurth', 'Escalona', 'Stefany',
-];
-
 (async () => {
   await connectWithRetry(5, 1000);
+  await mongoose.connection.dropDatabase();
+  await run({ silent: true });
+
   const servidor = app.listen(PUERTO);
 
   const pedir = async (ruta, { metodo = 'GET', body, token } = {}) => {
     const r = await fetch(API + ruta, {
       method: metodo,
-      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       body: body ? JSON.stringify(body) : undefined,
     });
     let datos = null;
-    try { datos = await r.json(); } catch { datos = null; }
-    return { estado: r.status, datos, cuerpo: datos?.data };
+    try {
+      datos = await r.json();
+    } catch {
+      datos = null;
+    }
+    return { estado: r.status, cuerpo: datos?.data };
   };
 
   try {
-    console.log('\n1. La visita entra');
-    let r = await pedir('/auth/login', {
+    console.log('\n1. La cuenta entra y tiene su rol');
+    const r0 = await pedir('/auth/login', {
       metodo: 'POST',
-      body: { email: process.env.DEMO_EMAIL, password: process.env.DEMO_PASSWORD },
+      body: { email: 'demo@academia.com', password: 'Clave-Visita-Larga-26' },
     });
-    ok(r.estado === 200, `entra con la cuenta publica (${r.estado})`);
-    ok(r.cuerpo?.user?.role === 'demo', `con rol ${r.cuerpo?.user?.role}`);
-    const token = r.cuerpo?.token;
+    ok(r0.estado === 200, `entra (${r0.estado})`);
+    ok(r0.cuerpo?.user?.role === 'demo', `con rol ${r0.cuerpo?.user?.role}`);
+    const visita = r0.cuerpo?.token;
 
-    console.log('\n2. Puede mirar y probar');
-    const mirar = [
-      ['/students', 'los alumnos'],
-      ['/payments', 'los cobros'],
-      ['/library/products', 'el catalogo'],
-      ['/library/sales', 'las ventas'],
-      ['/dashboard/overview', 'el panel'],
-      ['/activity', 'su actividad'],
+    console.log('\n2. Puede ensenar la aplicacion sobre sus propios datos');
+    const panel = await pedir('/dashboard/overview', { token: visita });
+    ok(panel.estado === 200, `ve el panel (${panel.estado})`);
+
+    const alta = await pedir('/students', {
+      metodo: 'POST',
+      token: visita,
+      body: { firstName: 'Alumno', lastName: 'De prueba', monthlyFee: 70, status: 'activo' },
+    });
+    ok(alta.estado === 201, `inscribe un alumno (${alta.estado})`);
+    const alumnoId = alta.cuerpo?.id;
+
+    const edicion = await pedir(`/students/${alumnoId}`, {
+      metodo: 'PUT',
+      token: visita,
+      body: { firstName: 'Alumno', lastName: 'Editado', monthlyFee: 80 },
+    });
+    ok(edicion.estado === 200, `y lo edita (${edicion.estado})`);
+
+    const producto = await pedir('/library/products', {
+      metodo: 'POST',
+      token: visita,
+      body: { name: 'Cuaderno', cost: 1000, price: 1800, stock: 10 },
+    });
+    ok(producto.estado === 201, `crea un producto de libreria (${producto.estado})`);
+
+    const venta = await pedir('/library/sales', {
+      metodo: 'POST',
+      token: visita,
+      body: {
+        items: [{ productId: producto.cuerpo?.id, quantity: 2 }],
+        paidAmount: 3600,
+      },
+    });
+    ok(venta.estado === 201, `y registra una venta (${venta.estado})`);
+
+    const gasto = await pedir('/personal-payments', {
+      metodo: 'POST',
+      token: visita,
+      body: { concept: 'Gasto de prueba', amount: 50, currency: 'USD' },
+    });
+    ok(gasto.estado === 201, `anota un gasto personal (${gasto.estado})`);
+
+    // El personal de la libreria si lo administra: es suyo, inventado por
+    // ella. Lo que no alcanza es la NOMINA, que es de la casa.
+    const personal = await pedir('/library/staff', { token: visita });
+    ok(personal.estado === 200, `administra su propio personal (${personal.estado})`);
+
+    console.log('\n3. Y deshacer lo suyo, que para eso es un cajon de pruebas');
+    const borrado = await pedir(`/students/${alumnoId}`, { metodo: 'DELETE', token: visita });
+    ok(borrado.estado === 200, `borra el alumno que creo (${borrado.estado})`);
+    const borraGasto = await pedir(`/personal-payments/${gasto.cuerpo?.id}`, {
+      metodo: 'DELETE',
+      token: visita,
+    });
+    ok(borraGasto.estado === 200, `y el gasto (${borraGasto.estado})`);
+
+    console.log('\n4. Lo que NO alcanza');
+    const vetadas = [
+      ['/auth/users', 'las cuentas de la aplicacion'],
+      ['/activity/all', 'la actividad de los demas'],
+      ['/rent', 'el alquiler'],
+      ['/teacher-payments', 'la nomina docente'],
+      ['/library/payroll', 'la nomina de libreria'],
     ];
-    for (const [ruta, que] of mirar) {
-      const res = await pedir(ruta, { token });
-      ok(res.estado === 200, `ve ${que} (${res.estado})`);
+    for (const [ruta, que] of vetadas) {
+      const r = await pedir(ruta, { token: visita });
+      // 403 exacto, no "403 o 404": un 404 valdria igual si la ruta no
+      // existiera, y entonces la comprobacion no estaria comprobando nada.
+      ok(r.estado === 403, `${que} (${r.estado})`);
     }
 
-    r = await pedir('/students', {
-      metodo: 'POST', token,
-      body: { firstName: 'Visitante', lastName: 'De Prueba', monthlyFee: 70, monthlyCharge: 'pendiente' },
+    const clave = await pedir('/auth/change-password', {
+      metodo: 'POST',
+      token: visita,
+      body: { currentPassword: 'Clave-Visita-Larga-26', newPassword: 'OtraClaveLarga2026' },
     });
-    ok(r.estado === 201, `puede inscribir un alumno (${r.estado})`);
-    const nuevo = r.cuerpo?.id;
+    ok(clave.estado === 403, `no puede cambiar su contrasena (${clave.estado})`);
+    console.log('         es compartida: el primero que la cambiara dejaria fuera al resto');
 
-    // El PUT pide el formulario completo, como lo manda la aplicacion.
-    r = await pedir(`/students/${nuevo}`, {
-      metodo: 'PUT', token,
-      body: { firstName: 'Visitante', lastName: 'De Prueba', monthlyFee: 70, grade: '3er grado' },
-    });
-    ok(r.estado === 200, `y editarlo (${r.estado})`);
-
-    console.log('\n3. Pero no puede romper nada');
-    const prohibido = [
-      [`/students/${nuevo}`, 'DELETE', 'borrar un alumno'],
-      ['/payments/1', 'DELETE', 'borrar un cobro'],
-      ['/payments/1/void', 'POST', 'anular un cobro'],
-      ['/library/sales/1', 'DELETE', 'borrar una venta'],
-      ['/auth/users', 'GET', 'ver los usuarios'],
-      ['/personal-payments', 'GET', 'ver los retiros'],
-      ['/rent', 'GET', 'ver el alquiler'],
-      ['/teacher-payments', 'GET', 'ver la nomina'],
-      ['/activity/all', 'GET', 'ver la actividad de todos'],
-    ];
-    for (const [ruta, metodo, que] of prohibido) {
-      const res = await pedir(ruta, { metodo, token });
-      ok(res.estado === 403, `no puede ${que} (${res.estado})`);
-    }
-
-    r = await pedir('/auth/change-password', {
-      metodo: 'POST', token,
-      body: { currentPassword: process.env.DEMO_PASSWORD, newPassword: 'OtraClaveLarga2026' },
-    });
-    ok(r.estado === 403,
-      `no puede cambiar la clave, o dejaria fuera al resto de visitas (${r.estado})`);
-
-    console.log('\n4. Y no ve las cifras del negocio');
-    const panel = await pedir('/dashboard/overview', { token });
-    const f = panel.cuerpo?.finance;
-    ok(f?.personalTotal === undefined && f?.netMonth === undefined && f?.payrollPeriodTotal === undefined,
-      'ni retiros, ni neto, ni nomina');
-    const profes = await pedir('/teachers', { token });
-    ok(profes.cuerpo?.[0]?.weeklySalary === undefined, 'ni lo que cobra cada profesor');
-
-    console.log('\n5. Lo importante: ni un dato real');
-    const sitios = ['/students?limit=200', '/payments?limit=200', '/teachers', '/library/sales?limit=200'];
-    let encontrado = null;
-    for (const ruta of sitios) {
-      const res = await pedir(ruta, { token });
-      const texto = JSON.stringify(res.cuerpo || '');
-      const hit = NOMBRES_REALES.find((n) => texto.includes(n));
-      if (hit) { encontrado = `${hit} (en ${ruta})`; break; }
-    }
-    ok(!encontrado, encontrado
-      ? `APARECE UN NOMBRE REAL: ${encontrado}`
-      : 'ningun nombre de la academia real asoma por la demo');
-
-    const alumnos = await pedir('/students?limit=200', { token });
-    ok((alumnos.cuerpo || []).length > 5, `la demo tiene sus propios alumnos (${(alumnos.cuerpo || []).length})`);
-
-    console.log('\n6. Las bases estan de verdad separadas');
-    const real = mongoose.connection.client.db('academia');
-    const demo = mongoose.connection.client.db(process.env.DB_NAME);
-    const nombresReales = (await real.collection('students').find({}).limit(3).toArray()).map((s) => s.firstName);
-    const nombresDemo = (await demo.collection('students').find({}).limit(3).toArray()).map((s) => s.firstName);
-    ok(!nombresDemo.some((n) => nombresReales.includes(n)),
-      `real: ${nombresReales.join(', ')} | demo: ${nombresDemo.join(', ')}`);
-
-    const usuariosReales = await real.collection('users').find({ role: 'demo' }).toArray();
-    ok(usuariosReales.length === 0,
-      `la cuenta de demostracion NO existe en la base real (${usuariosReales.length} encontrada/s)`);
-
-  } catch (error) {
-    console.error('\nERROR', error);
-    fallos += 1;
+    console.log('\n5. Y el administrador lo sigue teniendo todo');
+    const admin = (
+      await pedir('/auth/login', {
+        metodo: 'POST',
+        body: { email: 'admin@academia.com', password: 'Clave-Admin-Larga-2026' },
+      })
+    ).cuerpo?.token;
+    const alquiler = await pedir('/rent', { token: admin });
+    ok(alquiler.estado === 200, `el alquiler (${alquiler.estado})`);
+    const cuentas = await pedir('/auth/users', { token: admin });
+    ok(cuentas.estado === 200, `y las cuentas (${cuentas.estado})`);
   } finally {
     servidor.close();
     await mongoose.disconnect();
-    console.log(`\n${fallos === 0 ? 'TODO CORRECTO' : `${fallos} FALLO(S)`}\n`);
-    process.exit(fallos === 0 ? 0 : 1);
   }
-})();
+
+  console.log(`\n${fallos === 0 ? '  TODO CORRECTO' : `  ${fallos} FALLO(S)`}\n`);
+  process.exit(fallos === 0 ? 0 : 1);
+})().catch((error) => {
+  console.error(`\n  Error: ${error.message}\n`);
+  process.exit(1);
+});

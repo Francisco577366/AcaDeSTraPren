@@ -95,6 +95,23 @@ const env = {
     name: process.env.DEMO_NAME || 'Demostracion',
     email: process.env.DEMO_EMAIL || null,
     password: process.env.DEMO_PASSWORD || null,
+    /**
+     * Cuanto puede crear la cuenta publica, por coleccion.
+     *
+     * Es una cuenta que cualquiera abre desde un enlace y que PUEDE insertar.
+     * Sin tope, un visitante aburrido (o un script) llena la base, y la base
+     * es la misma que la de la academia: lo que se para no es la demo, es el
+     * negocio.
+     */
+    maxPorColeccion: Number(process.env.DEMO_MAX_REGISTROS || 10),
+    /**
+     * Cuanto le dura lo que crea, en horas.
+     *
+     * Pasado ese tiempo se barre. Asi el cajon no acumula lo que dejaron
+     * veinte visitantes y cada uno se encuentra la aplicacion limpia, que es
+     * como mejor se entiende en dos minutos.
+     */
+    horasVida: Number(process.env.DEMO_HORAS_VIDA || 12),
   },
   /**
    * Quien atiende el mostrador de la libreria: vende, cobra lo pendiente y
