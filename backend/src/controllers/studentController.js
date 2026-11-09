@@ -52,7 +52,17 @@ const create = asyncHandler(async (req, res) => {
   } = req.body;
 
   const now = new Date();
-  const { month, year } = currentPeriod();
+  /*
+   * El periodo de los primeros cobros sale de lo que pida el alta, y solo si
+   * no viene nada se usa el mes en curso.
+   *
+   * Antes era siempre el mes en curso, sin mas: inscribir a un alumno
+   * estando en octubre le creaba la mensualidad de NOVIEMBRE, que no es lo
+   * que nadie espera al haber cambiado el mes en la cabecera a proposito.
+   */
+  const actual = currentPeriod();
+  const month = Number(req.body.month) || actual.month;
+  const year = Number(req.body.year) || actual.year;
   const period = `${year}-${String(month).padStart(2, '0')}`;
 
   /*
@@ -69,6 +79,14 @@ const create = asyncHandler(async (req, res) => {
       );
 
       /** Emite un cobro y lo deja pagado si asi se indico en el alta. */
+      /*
+       * Si el alta llega con fecha de pago, se respeta.
+       *
+       * Sin ella, el modelo sella el dia de hoy en cuanto entra dinero, y eso
+       * descoloca el mes: inscribir en noviembre a un alumno cuyo periodo es
+       * octubre metia la inscripcion cobrada en la caja de noviembre. El
+       * panel cuenta por fecha de pago, no por periodo del recibo.
+       */
       const charge = async ({ concept, conceptType, amount, dueDate, paid }) => {
         await Payment.create(
           [{
@@ -78,6 +96,7 @@ const create = asyncHandler(async (req, res) => {
             conceptType,
             amount,
             paidAmount: paid ? amount : 0,
+            ...(paid && req.body.paymentDate ? { paymentDate: req.body.paymentDate } : {}),
             periodMonth: month,
             periodYear: year,
             dueDate,
