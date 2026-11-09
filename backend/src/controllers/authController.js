@@ -4,6 +4,7 @@ const ApiError = require('../utils/ApiError');
 const asyncHandler = require('../utils/asyncHandler');
 const { esDemo } = require('../config/roles');
 const { updateRecord } = require('../utils/persist');
+const { limpiarDemo } = require('../services/limpiezaDemo');
 const { User } = require('../models');
 
 function signToken(user) {
@@ -21,6 +22,25 @@ const login = asyncHandler(async (req, res) => {
     throw ApiError.unauthorized('Correo o contrasena incorrectos');
   }
   if (!user.active) throw ApiError.forbidden('El usuario esta desactivado');
+
+  /*
+   * Cada visita entra a una aplicacion limpia.
+   *
+   * El barrido tambien lo lanza el cron una vez al dia, pero eso no basta:
+   * entre dos ejecuciones pueden pasar veinte visitantes y el segundo se
+   * encontraria los alumnos inventados del primero, que es desconcertante y
+   * no ensena nada.
+   *
+   * Va en try/catch a proposito: limpiar es deseable, entrar es obligatorio.
+   * Si el barrido falla, que falle solo.
+   */
+  if (esDemo(user)) {
+    try {
+      await limpiarDemo();
+    } catch (error) {
+      console.warn(`[demo] No se pudo barrer el cajon: ${error.message}`);
+    }
+  }
 
   await updateRecord(user, { lastLoginAt: new Date() });
 

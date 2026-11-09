@@ -5,6 +5,7 @@ const env = require('../config/env');
 const ApiError = require('../utils/ApiError');
 const asyncHandler = require('../utils/asyncHandler');
 const { ensureMonthlyCharges, MONTHS } = require('../services/monthlyCharges');
+const { limpiarDemo } = require('../services/limpiezaDemo');
 
 const router = Router();
 
@@ -72,9 +73,44 @@ router.get(
     const etiqueta = `${MONTHS[resultado.period.month - 1]} ${resultado.period.year}`;
     console.log(`[cron] ${etiqueta}: ${resultado.created} emitida(s), ${resultado.skipped} ya estaban`);
 
+    /*
+     * De paso, el barrido del cajon de pruebas.
+     *
+     * Va colgado de esta tarea y no de una suya porque el plan gratuito de
+     * Vercel permite muy pocos crons, y porque el riesgo de no barrer es
+     * lento: la base se va llenando, no se rompe de golpe. El barrido de
+     * verdad, el que importa, ocurre cada vez que entra una visita.
+     */
+    const limpieza = await limpiarDemo({ silent: false });
+
     return res.json({
       success: true,
       message: `${etiqueta}: ${resultado.created} mensualidad(es) emitida(s)`,
+      data: { ...resultado, demoBarrido: limpieza.total },
+    });
+  })
+);
+
+/**
+ * @openapi
+ * /cron/limpiar-demo:
+ *   get:
+ *     tags: [Cron]
+ *     summary: Barre lo que la cuenta de demostracion dejo hace mas de N horas
+ *     description: >
+ *       Solo alcanza registros marcados como de la demostracion: corre dentro
+ *       de una sesion de visita y los modelos filtran cada consulta. Los datos
+ *       de la academia no se tocan, ni las cuentas.
+ */
+router.get(
+  '/limpiar-demo',
+  limite,
+  soloCron,
+  asyncHandler(async (req, res) => {
+    const resultado = await limpiarDemo({ silent: false });
+    return res.json({
+      success: true,
+      message: `${resultado.total} registro(s) de demostracion barrido(s)`,
       data: resultado,
     });
   })

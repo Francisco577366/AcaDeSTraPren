@@ -53,6 +53,18 @@ const esAdmin = (user) => normalizarRol(user?.role) === 'admin';
 const esDemo = (user) => normalizarRol(user?.role) === 'demo';
 
 /** Quien atiende la libreria. Su mundo empieza y acaba en ese modulo. */
+/**
+ * Quien ve las cifras SIN recortar.
+ *
+ * El administrador, porque es suyo. Y la cuenta de visita, porque lo que ve
+ * son sus propios numeros inventados: ocultarle la ganancia de su libreria o
+ * sus gastos no protege nada y deja la demostracion a medias.
+ *
+ * Esto NO es un permiso: no abre ninguna ruta. Solo dice que, de lo que ya
+ * puede ver, no hay nada que taparle.
+ */
+const veSusCifras = (user) => esAdmin(user) || esDemo(user);
+
 const esLibreria = (user) => normalizarRol(user?.role) === 'libreria';
 
 /**
@@ -109,7 +121,7 @@ const CAMPOS_MARGEN = ['profit', 'marginPct', 'cost', 'stockValue', 'potentialMa
 
 /** Quita del objeto, y de lo que cuelgue de el, las cifras de margen. */
 function recortarMargen(valor, user) {
-  if (esAdmin(user) || !valor) return valor;
+  if (veSusCifras(user) || !valor) return valor;
   if (Array.isArray(valor)) return valor.map((v) => recortarMargen(v, user));
   if (typeof valor !== 'object') return valor;
 
@@ -161,7 +173,7 @@ function soloPermitido(objeto, permitidas) {
  * puerta. Lo que se oculta hay que ocultarlo en TODAS las puertas.
  */
 function recortarPanel(data, user) {
-  if (esAdmin(user)) return data;
+  if (veSusCifras(user)) return data;
 
   // Quien atiende la libreria ve aun menos que un usuario normal: solo lo
   // suyo. Va antes del recorte general porque es mas estrecho, no otra cosa.
@@ -199,7 +211,7 @@ function recortarSueldo(fila, user) {
   if (!fila) return fila;
   const copia = fila.toJSON ? fila.toJSON() : { ...fila };
   delete copia._id;
-  if (esAdmin(user)) return copia;
+  if (veSusCifras(user)) return copia;
   CAMPOS_SUELDO.forEach((campo) => delete copia[campo]);
   return copia;
 }
@@ -220,6 +232,7 @@ module.exports = {
   esAdmin,
   esDemo,
   esLibreria,
+  veSusCifras,
   recortarPanel,
   recortarMargen,
   CAMPOS_MARGEN,

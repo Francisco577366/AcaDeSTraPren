@@ -30,6 +30,18 @@ const { run } = require('../src/seed/bootstrap');
 let fallos = 0;
 const ok = (c, t) => { console.log((c ? '  OK   ' : '  FALLA') + ' ' + t); if (!c) fallos += 1; };
 
+/*
+ * El mes que prueba esta suite, y la fecha con la que entra el dinero.
+ *
+ * Van fijas a proposito. El panel cuenta los ingresos por FECHA DE PAGO, asi
+ * que si los abonos se sellaran con el dia de hoy, esta suite solo estaria en
+ * verde durante octubre: en noviembre el dinero se iria al mes siguiente y
+ * todas las cifras saldrian en cero. Una prueba que depende del calendario
+ * miente once meses al anio.
+ */
+const PERIODO = { month: 10, year: 2026 };
+const DIA_COBRO = '2026-10-20';
+
 const PUERTO = 4777;
 const API = `http://127.0.0.1:${PUERTO}/api`;
 let tokenAdmin = null;
@@ -86,7 +98,7 @@ async function pedir(ruta, { metodo = 'GET', body, token = tokenAdmin } = {}) {
     console.log('\n2. Alumnos y sus primeros cobros');
     r = await pedir('/students', {
       metodo: 'POST',
-      body: { firstName: 'Ana', lastName: 'Lugo', monthlyFee: 70, monthlyCharge: 'pendiente', enrollmentCharge: 'pagado', enrollmentFee: 30 },
+      body: { firstName: 'Ana', lastName: 'Lugo', monthlyFee: 70, monthlyCharge: 'pendiente', enrollmentCharge: 'pagado', enrollmentFee: 30, paymentDate: DIA_COBRO, month: PERIODO.month, year: PERIODO.year },
     });
     ok(r.estado === 201, `se inscribe un alumno (${r.estado})`);
     const alumno = r.cuerpo?.id;
@@ -105,14 +117,14 @@ async function pedir(ruta, { metodo = 'GET', body, token = tokenAdmin } = {}) {
 
     console.log('\n3. Cobrar');
     const mensualidad = cobros.find((c) => c.conceptType === 'mensualidad');
-    r = await pedir(`/payments/${mensualidad.id}/settle`, { metodo: 'POST', body: { amount: 30 } });
+    r = await pedir(`/payments/${mensualidad.id}/settle`, { metodo: 'POST', body: { amount: 30, paymentDate: DIA_COBRO } });
     ok(r.estado === 200 && r.cuerpo?.status === 'parcial', `un abono parcial deja el cobro en ${r.cuerpo?.status}`);
     ok(!!r.cuerpo?.paymentDate, 'y sella la fecha, para que entre en la caja del mes');
 
-    r = await pedir(`/payments/${mensualidad.id}/settle`, { metodo: 'POST', body: { amount: 40 } });
+    r = await pedir(`/payments/${mensualidad.id}/settle`, { metodo: 'POST', body: { amount: 40, paymentDate: DIA_COBRO } });
     ok(r.cuerpo?.status === 'pagado' && r.cuerpo?.balance === 0, 'el resto lo deja pagado y sin saldo');
 
-    r = await pedir(`/payments/${mensualidad.id}/settle`, { metodo: 'POST', body: { amount: 10 } });
+    r = await pedir(`/payments/${mensualidad.id}/settle`, { metodo: 'POST', body: { amount: 10, paymentDate: DIA_COBRO } });
     ok(r.estado === 400, `no deja cobrar de mas (${r.estado})`);
 
     console.log('\n4. Libreria: una venta descuenta stock');
@@ -120,7 +132,7 @@ async function pedir(ruta, { metodo = 'GET', body, token = tokenAdmin } = {}) {
     const producto = r.cuerpo?.id;
     ok(r.estado === 201, `se crea un producto (${r.estado})`);
 
-    r = await pedir('/library/sales', { metodo: 'POST', body: { items: [{ productId: producto, quantity: 3 }], paidAmount: 450 } });
+    r = await pedir('/library/sales', { metodo: 'POST', body: { items: [{ productId: producto, quantity: 3 }], paidAmount: 450, saleDate: DIA_COBRO } });
     ok(r.estado === 201, `se registra una venta (${r.estado})`);
     ok(r.cuerpo?.total === 450 && r.cuerpo?.itemsCount === 3, `por ${r.cuerpo?.total} y ${r.cuerpo?.itemsCount} unidades`);
 
@@ -243,6 +255,45 @@ async function pedir(ruta, { metodo = 'GET', body, token = tokenAdmin } = {}) {
     ok(r.estado === 201 && r.cuerpo?.created === 1, `emite noviembre (${r.cuerpo?.created})`);
     r = await pedir('/payments/generate-monthly', { metodo: 'POST', body: { month: 11, year: 2026 } });
     ok(r.cuerpo?.created === 0 && r.cuerpo?.skipped === 1, 'repetirlo no duplica nada');
+
+    /*
+     * 12. El dinero entra en el mes que se diga, no en el de hoy.
+     *
+     * Esto esta aqui por un fallo real: el formulario de abono no tenia campo
+     * de fecha, asi que el servidor sellaba siempre el dia de hoy. Poniendo
+     * al dia la cobranza de octubre en noviembre, octubre quedaba en cero y
+     * el dinero aparecia en noviembre. Y el recibo no delataba nada, porque
+     * su periodo seguia diciendo octubre.
+     *
+     * El panel cuenta por FECHA DE PAGO, no por periodo, asi que la fecha es
+     * la que manda. Tiene que poder elegirse.
+     */
+    console.log('\n12. El abono entra en el mes de su fecha, no en el de hoy');
+    const alumnoMes = await pedir('/students', {
+      metodo: 'POST',
+      body: { firstName: 'Mes', lastName: 'Prueba', monthlyFee: 50, status: 'activo' },
+    });
+    const cargoMes = await pedir(`/students/${alumnoMes.cuerpo.id}/charge`, {
+      metodo: 'POST',
+      body: { month: 8, year: 2026, amount: 50 },
+    });
+    ok(cargoMes.estado === 201, `cobro de agosto creado (${cargoMes.estado})`);
+
+    r = await pedir(`/payments/${cargoMes.cuerpo.id}/settle`, {
+      metodo: 'POST',
+      body: { amount: 50, method: 'efectivo', paymentDate: '2026-08-29' },
+    });
+    ok(r.cuerpo?.paymentDate === '2026-08-29', `se registra con fecha ${r.cuerpo?.paymentDate}`);
+    ok(r.cuerpo?.periodMonth === 8, `y el periodo del recibo sigue siendo ${r.cuerpo?.periodMonth}`);
+
+    const panelAgosto = await pedir('/dashboard/overview?month=8&year=2026');
+    ok(panelAgosto.cuerpo?.finance?.incomeMonth === 50, `agosto cobra ${panelAgosto.cuerpo?.finance?.incomeMonth}`);
+
+    const panelSep = await pedir('/dashboard/overview?month=9&year=2026');
+    ok(
+      panelSep.cuerpo?.finance?.incomeMonth !== 50,
+      `y septiembre no se lo lleva (${panelSep.cuerpo?.finance?.incomeMonth})`
+    );
 
   } catch (error) {
     console.error('\nERROR', error);

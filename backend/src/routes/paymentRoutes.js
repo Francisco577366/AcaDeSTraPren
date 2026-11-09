@@ -178,7 +178,7 @@ router.post('/:id/settle', [body('amount').isFloat({ gt: 0 })], validate, ctrl.s
  *     responses:
  *       200: { description: Pago anulado }
  */
-router.post('/:id/void', authorize('admin'), ctrl.voidPayment);
+router.post('/:id/void', authorize('admin', 'demo'), ctrl.voidPayment);
 
 /**
  * @openapi
@@ -194,7 +194,7 @@ router.post('/:id/void', authorize('admin'), ctrl.voidPayment);
  *     responses:
  *       200: { description: Pago restaurado }
  */
-router.post('/:id/restore', authorize('admin'), ctrl.restorePayment);
+router.post('/:id/restore', authorize('admin', 'demo'), ctrl.restorePayment);
 
 /**
  * @openapi
@@ -240,6 +240,6 @@ router.post('/:id/restore', authorize('admin'), ctrl.restorePayment);
  *     responses:
  *       200: { description: Pago eliminado }
  */
-router.route('/:id').get(ctrl.getOne).put(rules, validate, ctrl.update).delete(authorize('admin'), ctrl.remove);
+router.route('/:id').get(ctrl.getOne).put(rules, validate, ctrl.update).delete(authorize('admin', 'demo'), ctrl.remove);
 
 module.exports = router;

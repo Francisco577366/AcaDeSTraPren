@@ -181,6 +181,6 @@ router.post('/:id/settle', [body('amount').isFloat({ gt: 0 })], validate, ctrl.s
  *     responses:
  *       200: { description: Trabajo eliminado }
  */
-router.route('/:id').get(ctrl.getOne).put(rules, validate, ctrl.update).delete(authorize('admin'), ctrl.remove);
+router.route('/:id').get(ctrl.getOne).put(rules, validate, ctrl.update).delete(authorize('admin', 'demo'), ctrl.remove);
 
 module.exports = router;

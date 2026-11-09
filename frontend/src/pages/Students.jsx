@@ -5,7 +5,7 @@ import { studentThunks } from '../store/slices/resourceSlices';
 import { fetchOverview, fetchDebtors } from '../store/slices/dashboardSlice';
 import { resourceActions } from '../store';
 import { pushToast } from '../store/slices/uiSlice';
-import { LABELS, money, date, label, MONTHS } from '../utils/format';
+import { LABELS, money, date, label, MONTHS, fechaSugerida } from '../utils/format';
 import {
   optionsFrom, Modal, Badge, Loader, StatCard, EmptyState, Field, Input, Select, ErrorBanner,
 } from '../components/ui';
@@ -191,7 +191,24 @@ export default function Students() {
       defaultValue: 'pendiente',
       placeholder: null,
       hiddenOnEdit: true,
-      hint: 'Se emite el cobro del mes en curso',
+      hint: `Se emite el cobro de ${MONTHS[month - 1]} ${year}, el mes de la cabecera`,
+    },
+    /*
+     * El periodo y la fecha del dinero viajan escondidos, tomados del mes
+     * elegido en la cabecera.
+     *
+     * Sin esto el servidor usaba siempre el mes en curso: inscribir a un
+     * alumno estando en octubre le creaba la mensualidad de NOVIEMBRE, y la
+     * inscripcion cobrada entraba en la caja de noviembre. Nada de eso se
+     * veia en el recibo, que seguia diciendo octubre.
+     */
+    { name: 'month', defaultValue: month, hidden: true, hiddenOnEdit: true },
+    { name: 'year', defaultValue: year, hidden: true, hiddenOnEdit: true },
+    {
+      name: 'paymentDate',
+      defaultValue: fechaSugerida(month, year),
+      hidden: true,
+      hiddenOnEdit: true,
     },
     {
       name: 'enrollmentFee',

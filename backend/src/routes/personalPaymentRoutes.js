@@ -7,7 +7,7 @@ const ctrl = require('../controllers/personalPaymentController');
 const router = Router();
 // Router entero reservado al administrador.
 // Lo que el dueno retira para su bolsillo no es asunto de quien atiende.
-router.use(authenticate, authorize('admin'));
+router.use(authenticate, authorize('admin', 'demo'));
 
 const rules = [
   body('concept').trim().notEmpty().withMessage('El concepto es obligatorio'),

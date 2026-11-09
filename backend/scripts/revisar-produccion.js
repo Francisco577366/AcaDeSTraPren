@@ -208,7 +208,7 @@ titulo('7. Pendiente de ti (no lo puede saber este script)');
   'Generar JWT_SECRET, ADMIN_PASSWORD, USUARIO_PASSWORD y CRON_SECRET nuevos',
   'Poner CORS_ORIGIN con el dominio exacto de GitHub Pages, sin barra final',
   'Subir el seed de la academia a Atlas (npm run seed:load contra la base real)',
-  'Montar la demo como despliegue aparte, con su DB_NAME y sus DEMO_*',
+  'Poner DEMO_EMAIL y DEMO_PASSWORD en Vercel, y las VITE_DEMO_* en GitHub (para el aviso)',
   'Crear el repositorio con el .gitignore ya puesto',
 ].forEach(aviso);
 

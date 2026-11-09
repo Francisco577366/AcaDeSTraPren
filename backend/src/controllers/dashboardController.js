@@ -4,6 +4,7 @@ const { round2 } = require('../utils/money');
 const env = require('../config/env');
 const { getRate } = require('../services/exchangeRate');
 const { recortarPanel, esAdmin } = require('../config/roles');
+const { conFiltro } = require('../models/plugins/demo');
 const {
   Student, Teacher, Payment, Sale, StudentWork,
   TeacherPayment, EmployeePayment, RentPayment, PersonalPayment,
@@ -27,7 +28,10 @@ const una = async (promesa) => (await promesa)[0] || {};
  */
 const nomina = (filtro, grupo) => TeacherPayment.aggregate([
   { $match: filtro },
-  { $unionWith: { coll: EmployeePayment.collection.name, pipeline: [{ $match: filtro }] } },
+  // conFiltro: el sub-pipeline de un $unionWith no pasa por los hooks del
+  // modelo, asi que la separacion entre la academia y la visita hay que
+  // escribirla aqui. Sin esto, la nomina del personal se mezclaria.
+  { $unionWith: { coll: EmployeePayment.collection.name, pipeline: [{ $match: conFiltro(filtro) }] } },
   { $group: { _id: null, ...grupo } },
 ]);
 
@@ -139,10 +143,10 @@ const overview = asyncHandler(async (req, res) => {
           let: { trabajo: '$id' },
           pipeline: [
             {
-              $match: {
+              $match: conFiltro({
                 $expr: { $eq: ['$studentWorkId', '$$trabajo'] },
                 status: { $ne: 'anulado' },
-              },
+              }),
             },
             { $limit: 1 },
           ],
@@ -397,7 +401,7 @@ const cashflow = asyncHandler(async (req, res) => {
     Payment.aggregate([{ $match: delAnio }, { $group: PorMes }]),
     TeacherPayment.aggregate([
       { $match: delAnio },
-      { $unionWith: { coll: EmployeePayment.collection.name, pipeline: [{ $match: delAnio }] } },
+      { $unionWith: { coll: EmployeePayment.collection.name, pipeline: [{ $match: conFiltro(delAnio) }] } },
       { $group: PorMes },
     ]),
   ]);

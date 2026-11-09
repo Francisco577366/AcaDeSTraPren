@@ -14,8 +14,9 @@
  */
 const env = require('../src/config/env');
 const { connectWithRetry, mongoose } = require('../src/config/database');
+const { esSesionDemo, enSesion } = require('../src/config/contexto');
 const models = require('../src/models');
-const { syncCounter } = require('../src/models/plugins/autoIncrement');
+const { syncCounter, Counter, claveDe } = require('../src/models/plugins/autoIncrement');
 const { TABLES } = require('../src/seed/dataset');
 const { round2 } = require('../src/utils/money');
 
@@ -46,28 +47,65 @@ const entre = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
 const alAzar = (lista) => lista[Math.floor(Math.random() * lista.length)];
 const dia = (anio, mes, d) => `${anio}-${String(mes).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 
-async function sembrar() {
-  const nombre = String(env.db.name || '').toLowerCase();
-  if (!nombre.includes('demo')) {
-    console.error('');
-    console.error(`  Esto borra y rellena la base "${env.db.name}", y no parece la de demo.`);
-    console.error('  La siembra solo corre contra una base con "demo" en el nombre.');
-    console.error('');
-    console.error('  Si es la de demostracion, nombrala asi:');
-    console.error('    DB_NAME=academia_demo npm run demo:sembrar');
-    console.error('');
-    process.exit(1);
-  }
+/**
+ * Esta orden solo puede correr dentro de una sesion de visita.
+ *
+ * Es lo que la hace segura: dentro de esa sesion, TODAS las consultas de los
+ * modelos llevan el filtro `demo: true` puesto por el plugin. Un
+ * `deleteMany({})` de aqui no puede alcanzar un alumno de la academia aunque
+ * se escriba sin cuidado, porque el filtro no lo pone este fichero.
+ *
+ * Fuera de la sesion si podria, asi que no se deja.
+ */
+function exigirSesionDeVisita() {
+  if (esSesionDemo()) return;
+  console.error('');
+  console.error('  Esto borra registros y solo puede correr como sesion de visita.');
+  console.error('  Fuera de ella alcanzaria los datos de la academia.');
+  console.error('');
+  console.error('  Lanzalo asi, que ya la abre:');
+  console.error('    npm run atlas:demo');
+  console.error('');
+  process.exit(1);
+}
+
+/**
+ * Deja el cajon de pruebas en blanco: ni un alumno, ni un cobro, ni una venta.
+ *
+ * Es el estado en el que debe arrancar. Quien entra a mirar no ve nada y va
+ * creando lo suyo, que es lo que hace entendible la aplicacion en dos
+ * minutos. Tambien sirve para barrer lo que hayan dejado otros visitantes.
+ *
+ * Las CUENTAS no se tocan: borrar la de visita la dejaria sin puerta.
+ */
+async function vaciar() {
+  exigirSesionDeVisita();
 
   // Si ya hay conexion abierta (nos llamo preparar-atlas), se reutiliza.
   if (mongoose.connection.readyState !== 1) await connectWithRetry(5, 1000);
-  console.log(`\n  Sembrando datos inventados en "${env.db.name}"...\n`);
+  console.log('\n  Borrando lo que haya creado la visita...\n');
 
-  // Base limpia: la demo se restablece entera, no se acumula.
-  for (const t of [...TABLES].reverse()) await models[t].deleteMany({});
-  await mongoose.connection.collection('counters').deleteMany({
-    _id: { $in: TABLES.map((t) => models[t].collection.name) },
+  let borrados = 0;
+  for (const t of [...TABLES].reverse()) {
+    const { deletedCount } = await models[t].deleteMany({});
+    borrados += deletedCount || 0;
+  }
+
+  /*
+   * Y sus contadores, que son documentos aparte de los de la academia: la
+   * visita numera desde un millon para no gastar la numeracion de los
+   * recibos reales ni chocar con sus ids.
+   */
+  await Counter.deleteMany({
+    _id: { $in: TABLES.map((t) => claveDe(models[t].collection.name, true)) },
   });
+
+  console.log(`  ${borrados} registros fuera. Los de la academia, intactos.\n`);
+}
+
+async function sembrar() {
+  await vaciar();
+  console.log('  Sembrando datos inventados...\n');
 
   const { Student, Teacher, Employee, Product, Payment, TeacherPayment,
     EmployeePayment, RentPayment, PersonalPayment, Sale, SaleItem } = models;
@@ -210,7 +248,8 @@ async function sembrar() {
  * abrio: por eso la siembra no desconecta por su cuenta.
  */
 if (require.main === module) {
-  sembrar()
+  // Abre la sesion de visita: sin ella, sembrar se niega a correr.
+  enSesion(true, () => sembrar())
     .then(() => mongoose.disconnect())
     .catch((error) => {
       console.error('[demo] Error:', error.message);
@@ -218,4 +257,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = { sembrar };
+module.exports = { sembrar, vaciar };
