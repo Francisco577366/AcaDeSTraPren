@@ -164,3 +164,34 @@ export const STATUS_TONE = {
 };
 
 export const label = (group, value) => LABELS[group]?.[value] || value || '-';
+
+/** La fecha de hoy como aaaa-mm-dd, en la zona del navegador. */
+export const hoyLocal = () => {
+  const d = new Date();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${mm}-${dd}`;
+};
+
+/**
+ * Que fecha proponer al registrar un cobro.
+ *
+ * Hoy, si estas trabajando en el mes en curso. Pero si te has movido a un mes
+ * anterior —porque estas poniendo al dia la cobranza de octubre— lo que
+ * quieres es que ese dinero quede en octubre, y se propone el ultimo dia de
+ * ese mes.
+ *
+ * Importa porque el panel cuenta los ingresos por FECHA DE PAGO y no por
+ * periodo del recibo. Sin este campo, un cobro de octubre registrado en
+ * noviembre dejaba octubre en cero y sumaba en noviembre, y mirando el recibo
+ * no habia forma de verlo: su periodo seguia diciendo octubre.
+ *
+ * Se PROPONE, no se impone: el campo esta a la vista y se puede cambiar.
+ */
+export const fechaSugerida = (mes, anio) => {
+  const ahora = new Date();
+  if (mes === ahora.getMonth() + 1 && anio === ahora.getFullYear()) return hoyLocal();
+  // El dia 0 del mes siguiente es el ultimo del mes pedido.
+  const ultimo = new Date(anio, mes, 0).getDate();
+  return `${anio}-${String(mes).padStart(2, '0')}-${String(ultimo).padStart(2, '0')}`;
+};

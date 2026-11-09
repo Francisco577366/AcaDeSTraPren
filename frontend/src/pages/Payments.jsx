@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { paymentThunks } from '../store/slices/resourceSlices';
 import { resourceActions } from '../store';
 import { pushToast } from '../store/slices/uiSlice';
-import { LABELS, money, date, MONTHS, label } from '../utils/format';
+import { LABELS, money, date, MONTHS, label, hoyLocal, fechaSugerida } from '../utils/format';
 import {
   optionsFrom, Modal, Badge, StatCard, Field, Input, Select, ErrorBanner,
 } from '../components/ui';
@@ -27,7 +27,9 @@ export default function Payments() {
   );
 
   const [settleFor, setSettleFor] = useState(null);
-  const [settleForm, setSettleForm] = useState({ amount: '', method: 'efectivo', reference: '' });
+  const [settleForm, setSettleForm] = useState({
+    amount: '', method: 'efectivo', reference: '', paymentDate: hoyLocal(),
+  });
   const [settleError, setSettleError] = useState(null);
   const [voidFor, setVoidFor] = useState(null);
   const [voidReason, setVoidReason] = useState('');
@@ -57,7 +59,13 @@ export default function Payments() {
 
   const openSettle = (row) => {
     setSettleFor(row);
-    setSettleForm({ amount: String(row.balance ?? ''), method: row.method || 'efectivo', reference: '' });
+    setSettleForm({
+      amount: String(row.balance ?? ''),
+      method: row.method || 'efectivo',
+      reference: '',
+      // El dinero se fecha en el mes en el que estas trabajando, no en hoy.
+      paymentDate: fechaSugerida(month, year),
+    });
     setSettleError(null);
   };
 
@@ -222,8 +230,10 @@ export default function Payments() {
       defaultValue: 'efectivo',
       placeholder: null,
     },
-    { name: 'periodMonth', label: 'Mes del periodo', type: 'select', options: monthOptions },
-    { name: 'periodYear', label: 'Anio del periodo', type: 'number', step: '1', defaultValue: today.getFullYear() },
+    // Del mes elegido en la cabecera, no del reloj del navegador: si estas
+    // trabajando en octubre, un cobro nuevo es de octubre.
+    { name: 'periodMonth', label: 'Mes del periodo', type: 'select', options: monthOptions, defaultValue: month },
+    { name: 'periodYear', label: 'Anio del periodo', type: 'number', step: '1', defaultValue: year },
     { name: 'dueDate', label: 'Fecha de vencimiento', type: 'date' },
     { name: 'paymentDate', label: 'Fecha de pago', type: 'date' },
     { name: 'reference', label: 'Referencia', span: 2, placeholder: 'Numero de transferencia o comprobante' },
@@ -384,6 +394,18 @@ export default function Payments() {
               options={methodOptions}
               placeholder={null}
               onChange={(e) => setSettleForm({ ...settleForm, method: e.target.value })}
+            />
+          </Field>
+          <Field
+            label="Fecha del pago"
+            required
+            hint="De aqui sale en que mes entra el dinero, no del periodo del recibo"
+          >
+            <Input
+              type="date"
+              required
+              value={settleForm.paymentDate}
+              onChange={(e) => setSettleForm({ ...settleForm, paymentDate: e.target.value })}
             />
           </Field>
           <Field label="Referencia">

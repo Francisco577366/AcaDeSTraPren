@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { studentThunks } from '../store/slices/resourceSlices';
 import { pushToast } from '../store/slices/uiSlice';
-import { LABELS, money, date, MONTHS } from '../utils/format';
+import { LABELS, money, date, MONTHS, fechaSugerida } from '../utils/format';
 import { Modal, Badge, Loader, Field, Input, Select, ErrorBanner, optionsFrom } from './ui';
 
 const methodOptions = optionsFrom(LABELS.method);
@@ -22,9 +22,21 @@ export default function PaymentStatusModal({ student, onClose, onSaved }) {
 
   const [loading, setLoading] = useState(false);
   const [marks, setMarks] = useState({});
-  const [form, setForm] = useState({ method: 'efectivo', reference: '' });
   // La mensualidad que se emita desde aqui es la del mes de la cabecera.
   const periodo = useSelector((s) => s.period);
+  /*
+   * paymentDate sale del mes de la cabecera, no del reloj.
+   *
+   * El panel cuenta los ingresos por FECHA DE PAGO, no por el periodo del
+   * recibo. Sin este campo, confirmar en noviembre la cobranza de octubre
+   * dejaba octubre en cero y sumaba el dinero en noviembre, y el recibo no
+   * delataba nada: su periodo seguia diciendo octubre.
+   */
+  const [form, setForm] = useState({
+    method: 'efectivo',
+    reference: '',
+    paymentDate: fechaSugerida(periodo.month, periodo.year),
+  });
   const [charge, setCharge] = useState({ month: periodo.month, year: periodo.year });
   const [error, setError] = useState(null);
 
@@ -68,6 +80,7 @@ export default function PaymentStatusModal({ student, onClose, onSaved }) {
         pending: changed.filter((p) => !isPaid(p)).map((p) => p.id),
         method: form.method,
         reference: form.reference || null,
+        paymentDate: form.paymentDate,
       })
     );
 
@@ -189,6 +202,18 @@ export default function PaymentStatusModal({ student, onClose, onSaved }) {
                     options={methodOptions}
                     placeholder={null}
                     onChange={(e) => setForm({ ...form, method: e.target.value })}
+                  />
+                </Field>
+                <Field
+                  label="Fecha del pago"
+                  required
+                  hint="De aqui sale en que mes entra el dinero, no del periodo del recibo"
+                >
+                  <Input
+                    type="date"
+                    required
+                    value={form.paymentDate}
+                    onChange={(e) => setForm({ ...form, paymentDate: e.target.value })}
                   />
                 </Field>
                 <Field label="Referencia">
