@@ -815,67 +815,177 @@ caliente (nodemon en el backend, Vite en el frontend).
 
 ## Seguridad
 
-### Los tres roles
+### Los cuatro roles
 
-| | `admin` | `usuario` | `demo` |
-|---|---|---|---|
-| Quién | El dueño | Quien atiende el día a día | Una visita |
-| Alumnos, cobros, trabajos, librería | Todo | Ver, crear y editar | Ver, crear y editar |
-| Borrar o anular cualquier cosa | Sí | **No** | **No** |
-| Nómina de profesores y de librería | Sí | **No** | **No** |
-| Alquiler del local | Sí | **No** | **No** |
-| Pagos personales (retiros) | Sí | **No** | **No** |
-| Ganancia y neto del mes | Sí | **No** | **No** |
-| Lo que cobra cada profesor | Sí | **No** | **No** |
-| Gestión de usuarios | Sí | **No** | **No** |
-| Cambiar su propia contraseña | Sí | Sí | **No** |
+| | `admin` | `usuario` | `demo` | `libreria` |
+|---|---|---|---|---|
+| Quién | El dueño | El día a día | Una visita | Quien atiende el mostrador |
+| **Librería**: vender, cobrar, inventario | Sí | Sí | Sí | **Sí** |
+| Alumnos, cobros de mensualidades, trabajos | Todo | Ver, crear, editar | Ver, crear, editar | **No** |
+| Profesores | Sí | Sin sueldos | Sin sueldos | **No** |
+| Borrar o anular cualquier cosa | Sí | No | No | **No** |
+| Nómina de profesores y de librería | Sí | No | No | **No** |
+| Alquiler del local | Sí | No | No | **No** |
+| Pagos personales (retiros) | Sí | No | No | **No** |
+| Ganancia y neto del mes | Sí | No | No | **No** |
+| Gestión de usuarios | Sí | No | No | **No** |
+| Cambiar su propia contraseña | Sí | Sí | **No** | Sí |
 
 Entre `admin` y `usuario` la diferencia no es "uno puede más que otro". Es que
 hay información del negocio que no es asunto de quien atiende el mostrador: lo
 que gana cada profesor, lo que cuesta el local, lo que el dueño retira para su
 bolsillo y cuánto queda de ganancia.
 
-#### Y la demo, que va aparte
+#### La cuenta del mostrador
 
-`demo` ve y prueba exactamente lo mismo que `usuario`. Lo que lo separa no son
-los permisos sino **dónde vive**: corre contra su propia base, con datos
-inventados.
+`libreria` es para quien trabaja en la librería. Puede vender, cobrar lo que
+quedó a crédito y ajustar inventario — y nada más. Alumnos, mensualidades,
+trabajos, profesores, nómina: todo eso le devuelve 403.
 
-Esa es la única garantía de verdad. Una cuenta pública —cuyo correo y
-contraseña se reparten en un enlace— contra la base real pondría los nombres de
-30 menores, sus mensualidades y los retiros del dueño al alcance de cualquiera.
-Un rol con menos permisos sobre los mismos datos sería una fuga esperando a que
-alguien se equivoque en un filtro; una base distinta no tiene cómo fallar,
-porque los alumnos reales no están ahí.
+Su panel también se recorta, y mucho más que el de la secretaria: no verá ni
+una cifra de finanzas ni el número de alumnos, porque su trabajo no toca
+cobranza. Se queda con sus ventas y con la tasa del BCV, que la necesita
+porque la librería cobra en bolívares.
 
-Por eso **el arranque se niega** a crear la cuenta de demostración si `DB_NAME`
-no dice `demo`, y el sembrador de datos inventados se niega a correr contra
-cualquier otra base. Es tosco a propósito: la alternativa es confiar en que
-nadie se equivoque de variable el día del despliegue.
+Dos cosas que **no** puede, aunque atienda el mostrador: **anular una venta**
+y **borrar** cualquier cosa. Las dos ya estaban reservadas al administrador,
+así que el rol nuevo las hereda cerradas. Para deshacer una venta hay que
+pedírtelo a ti, que es lo sano con dinero de por medio.
 
-Lo único que `demo` no puede hacer y `usuario` sí es **cambiar su contraseña**.
-La cuenta es compartida: el primer visitante que la cambiara dejaría fuera a
-todos los demás, y a ti sin demo que enseñar.
+En el menú solo le aparece **Librería**, nada más. Y escribir la dirección de
+otra sección a mano —incluido el panel— le devuelve a Librería en vez de
+dejarle ver una pantalla llena de errores.
 
-Para montarla:
+El menú de este rol se arma **al revés** que los demás: en vez de quitarle lo
+prohibido, se le da solo lo suyo. Así una sección nueva no le aparece por
+descuido el día que se añada.
+
+#### Y la demo, que vive en su propio cajón
+
+`demo` es la cuenta pública: su correo y su contraseña se reparten en un enlace
+de LinkedIn, y quien entra puede **crear, editar y borrar** para probar la
+aplicación de verdad.
+
+Comparte base con la academia, pero no comparte datos. Cada registro lleva una
+marca `demo` y **cada consulta la filtra**, así que la visita ve solo lo que
+ella misma crea. Entra y no hay nada; va inscribiendo sus alumnos, vendiendo en
+su librería y anotando sus gastos, y ve la aplicación responder a lo suyo.
+
+Lo que registre tampoco ensucia tus libros: no entra en tus totales, no asoma
+en tus listados y no gasta la numeración de tus recibos.
+
+**El filtro no se escribe en cada consulta.** Son cuarenta agregaciones
+repartidas por nueve ficheros, seis de ellas cruzando colecciones; acertar en
+todas, hoy y en cada consulta que se escriba mañana, no es una garantía sino
+una esperanza. Y un filtro olvidado no da error: enseña datos reales a quien no
+debe verlos. Así que lo pone un plugin de Mongoose, desde los modelos, en todas
+a la vez — `backend/src/models/plugins/demo.js`.
+
+Lo único que el plugin no alcanza son los `$lookup` y `$unionWith`, que leen
+otra colección desde dentro de una agregación: su sub-pipeline no pasa por los
+hooks del modelo. Son seis en todo el backend y llevan `conFiltro()` escrito al
+lado. **Si añades un cruce nuevo, esa función tiene que ir dentro.**
+
+##### Los dos problemas de compartir base
+
+Compartir base los trae puestos, y los dos se resuelven en el contador de ids:
+
+**Los huecos en la numeración.** Si la visita gastara tu contador, cada alumno
+que inventara dejaría un hueco en tus recibos: tendrías el `REC-000066` y el
+siguiente sería el `REC-000070`, sin nada en medio que explicarle a un
+representante.
+
+**Los choques.** El `id` es único en la colección, así que dos numeraciones
+empezando en 1 se pisarían: el alumno 1 del visitante contra el alumno 1 de
+verdad.
+
+Por eso son **dos contadores**, y el de la visita vive un millón más arriba. Un
+recibo suyo se lee `REC-1000001` a simple vista, lo que de paso deja claro que
+no es un recibo de la academia.
+
+##### Lo que puede y lo que no
+
+Puede todo lo que hace falta para enseñar el proyecto: alumnos, cobros,
+trabajos, la librería entera (productos, ventas, anular, borrar), su propio
+personal y sus gastos personales. Y borrar lo suyo, que para eso es un cajón de
+pruebas.
+
+No alcanza lo que es de la casa: la nómina, el alquiler, las cuentas de la
+aplicación ni la actividad de los demás. Y **no puede cambiar su contraseña**:
+la comparten todos los visitantes, y el primero que la cambiara dejaría fuera
+al resto.
+
+##### Lo que impide que llene la base
+
+Es una cuenta pública que **puede insertar**, y la base es la misma que la de
+la academia. El plan gratuito de Atlas son 512 MB compartidos: lo que se llena
+no es la demo, es el negocio. Así que tiene dos frenos.
+
+**Un tope por colección**, `DEMO_MAX_REGISTROS` (10 por defecto). Al llegar,
+la creación rebota con un 400 y un mensaje que explica qué pasa, en vez de
+fallar con un error de base de datos. Las colecciones derivadas —los cobros de
+cada alumno, los renglones de cada venta— llevan un tope más alto: crecen solas
+al crear las de arriba, y con el mismo límite dar de alta al sexto alumno
+fallaría por culpa de las mensualidades del quinto.
+
+El tope se comprueba en el plugin, no en las rutas, por lo mismo de siempre:
+ahí pasa todo lo que se crea, venga de donde venga.
+
+**Un barrido por antigüedad**, `DEMO_HORAS_VIDA` (12 por defecto). Se ejecuta
+**cada vez que entra una visita** —así cada uno se encuentra la aplicación
+limpia, que es como mejor se entiende en dos minutos— y también desde el cron
+diario, por si no entra nadie.
+
+El barrido corre dentro de una sesión de visita, así que solo alcanza lo
+marcado: el filtro no lo pone el servicio, lo ponen los modelos. Y no toca las
+cuentas, que dejarían la demo sin puerta.
+
+##### Montarla
+
+En el mismo `.env` van `DEMO_EMAIL` y `DEMO_PASSWORD`, y con eso ya existe. No
+hay otra base, ni otro despliegue, ni otra URL.
+
+Para barrer lo que vayan dejando los visitantes:
 
 ```bash
-cp .env.production.example .env.demo
+cd backend && npm run atlas:demo
 ```
 
-Rellena `DB_NAME` con algo que lleve `demo`, los `DEMO_*`, y siembra:
+Y si alguna vez prefieres enseñarla poblada, `npm run atlas:demo -- datos` le
+deja 18 alumnos inventados, con sus cobros, sus ventas y su nómina.
+
+Dos pruebas la respaldan:
 
 ```bash
-cd backend && DB_NAME=academia_demo npm run demo:sembrar
+cd backend && npm run probar:aislamiento && npm run probar:demo
 ```
+
+La primera es la que sostiene el diseño, y conviene correrla **cada vez que
+toques una consulta**: comprueba que la visita vea cero alumnos mientras el
+administrador ve los suyos, que lo que registre no aparezca en los libros de la
+academia, que no pueda leer un alumno real ni pidiéndolo por su id, que su
+dinero no entre en la caja del mes, que los `$lookup` no filtren nombres, que
+cada mundo lleve su numeración, y que vaciar el cajón no roce nada de la casa.
+
+La segunda comprueba los permisos: lo que puede hacer y lo que le sale 403.
+
+##### Y la auditoría de la puerta
+
+Aparte de los roles, hay una prueba que recorre **todas** las rutas del API y
+comprueba que ninguna deje pasar sin token:
 
 ```bash
-cd backend && npm run probar:demo
+cd backend && npm run probar:endpoints
 ```
 
-La última comprueba lo que importa: que la visita pueda mirar y probar, que no
-pueda borrar ni anular ni cambiar la clave, que no vea cifras del negocio, y
-que **ningún nombre de la academia real** asome por la demo.
+No es una lista escrita a mano: le pregunta a Express qué rutas tiene montadas,
+así que una ruta nueva entra sola en la auditoría. De cada una prueba cinco
+entradas —sin cabecera, con un token inventado, con uno firmado con **otra**
+clave, con uno caducado, y con uno de algoritmo `none`— y exige 401 en todas.
+
+Las dos que sí están abiertas (`/api/health` y el login) están en una lista con
+su motivo escrito, y la prueba comprueba que **no** devuelvan 401, para que no
+se cuelen en silencio.
 
 Las cuentas se crean solas al arrancar, desde el entorno. La del usuario
 **solo si defines `USUARIO_EMAIL` y `USUARIO_PASSWORD`**: una cuenta con clave

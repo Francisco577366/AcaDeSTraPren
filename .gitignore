@@ -16,6 +16,13 @@ coverage/
 !.env.example
 !.env.production.example
 
+# Documentos generados para insertar a mano en la base: llevan las
+# contrasenas cifradas. Un hash no es texto plano, pero en un repositorio
+# publico se puede atacar sin prisa y sin que nadie se entere.
+demo-usuarios.json
+demo-contador.json
+*-usuarios.json
+
 # ---- Datos personales ----
 # El seed guarda los datos REALES de la academia: nombres de alumnos, sus
 # mensualidades y su historial de pagos. Son datos personales de menores, asi

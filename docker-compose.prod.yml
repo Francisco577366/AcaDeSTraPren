@@ -76,6 +76,9 @@ services:
       EXCHANGE_RATE_TTL_MINUTES: ${EXCHANGE_RATE_TTL_MINUTES:-360}
       ACADEMY_START_DATE: ${ACADEMY_START_DATE:-2026-09-15}
       TZ: ${TZ:-America/Caracas}
+      # En que dia vive la academia. Aparte de TZ, que las plataformas
+      # fijan en UTC sin dejar cambiarla.
+      ACADEMY_TZ: ${ACADEMY_TZ:-America/Caracas}
     expose:
       - "4000"
     healthcheck:
