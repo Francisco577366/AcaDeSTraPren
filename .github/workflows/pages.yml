@@ -58,6 +58,14 @@ jobs:
           VITE_API_URL: ${{ vars.VITE_API_URL || secrets.VITE_API_URL }}
           # Pages sirve el proyecto en /nombre-del-repositorio/, no en la raiz.
           VITE_BASE_PATH: /${{ github.event.repository.name }}/
+          # Credenciales de la demostracion, solo para el aviso de bienvenida.
+          # El API es el mismo: quien separa a la visita de la academia es el
+          # backend, mandandola a otra base. Esto es texto en una pantalla.
+          #
+          # Van en vars y no en secrets a proposito: son publicas, viajan en
+          # el enlace que se comparte. Si no se definen, el aviso no se pinta.
+          VITE_DEMO_EMAIL: ${{ vars.VITE_DEMO_EMAIL }}
+          VITE_DEMO_PASSWORD: ${{ vars.VITE_DEMO_PASSWORD }}
         run: npm run build
 
       # Si falta la variable el build "funciona" pero la web queda muerta, asi

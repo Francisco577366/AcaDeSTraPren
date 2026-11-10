@@ -70,6 +70,17 @@ services:
       USUARIO_NAME: ${USUARIO_NAME:-Usuario}
       USUARIO_EMAIL: ${USUARIO_EMAIL:-}
       USUARIO_PASSWORD: ${USUARIO_PASSWORD:-}
+      # El mostrador de la libreria y la cuenta publica de visita. Sin estas
+      # lineas el .env puede tenerlas, pero el contenedor no las ve y
+      # bootstrap no crea las cuentas: aqui las variables van una a una.
+      LIBRERIA_NAME: ${LIBRERIA_NAME:-Libreria}
+      LIBRERIA_EMAIL: ${LIBRERIA_EMAIL:-}
+      LIBRERIA_PASSWORD: ${LIBRERIA_PASSWORD:-}
+      DEMO_NAME: ${DEMO_NAME:-Visita}
+      DEMO_EMAIL: ${DEMO_EMAIL:-}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-}
+      DEMO_MAX_REGISTROS: ${DEMO_MAX_REGISTROS:-10}
+      DEMO_HORAS_VIDA: ${DEMO_HORAS_VIDA:-12}
       CURRENCY: ${CURRENCY:-USD}
       BASE_MONTHLY_FEE: ${BASE_MONTHLY_FEE:-70}
       BASE_ENROLLMENT_FEE: ${BASE_ENROLLMENT_FEE:-0}
@@ -87,6 +98,9 @@ services:
       EXCHANGE_RATE_TTL_MINUTES: ${EXCHANGE_RATE_TTL_MINUTES:-360}
       ACADEMY_START_DATE: ${ACADEMY_START_DATE:-2026-09-15}
       TZ: ${TZ:-America/Caracas}
+      # En que dia vive la academia. Aparte de TZ, que las plataformas
+      # fijan en UTC sin dejar cambiarla.
+      ACADEMY_TZ: ${ACADEMY_TZ:-America/Caracas}
     ports:
       - "127.0.0.1:${BACKEND_PORT:-4000}:4000"
     volumes:
@@ -106,6 +120,11 @@ services:
     environment:
       VITE_API_URL: ${VITE_API_URL:-http://localhost:4000/api}
       VITE_CURRENCY: ${CURRENCY:-USD}
+      # Para el aviso de bienvenida de la demostracion. Vite las resuelve AL
+      # CONSTRUIR, asi que tienen que estar en el entorno del contenedor: no
+      # basta con tenerlas en el .env. Si faltan, el aviso no se pinta.
+      VITE_DEMO_EMAIL: ${DEMO_EMAIL:-}
+      VITE_DEMO_PASSWORD: ${DEMO_PASSWORD:-}
       CHOKIDAR_USEPOLLING: "true"
     ports:
       - "127.0.0.1:${FRONTEND_PORT:-5173}:5173"
